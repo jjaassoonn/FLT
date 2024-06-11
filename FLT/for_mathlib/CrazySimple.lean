@@ -4,6 +4,7 @@ import FLT.for_mathlib.Con
 import Mathlib.Algebra.Quaternion
 import Mathlib.Algebra.Ring.Equiv
 import Mathlib.LinearAlgebra.Matrix.IsDiag
+import Mathlib.Algebra.Module.Submodule.Pointwise
 
 variable (A : Type*) [Ring A]
 
@@ -30,6 +31,82 @@ def RingCon.mapMatrix (I : RingCon A) : RingCon M[ι, A] where
     simpa only [Matrix.mul_apply] using I.sum fun k _ ↦ I.mul (h _ _) (h' _ _)
   add' {X X' Y Y'} h h' := fun i j ↦ by
     simpa only [Matrix.add_apply] using I.add (h _ _) (h' _ _)
+
+instance (M : Type*) [AddCommGroup M] [Module A M] : Module M[ι, A] (ι → M) where
+  smul N v := fun i => ∑ j : ι, N i j • v j
+  one_smul v := funext fun i => show ∑ _, _ = _ by simp [one_apply]
+  mul_smul N₁ N₂ v := funext fun i => show ∑ _, _ = ∑ _, _ • (∑ _, _) by
+    simp_rw [mul_apply, Finset.smul_sum, Finset.sum_smul, MulAction.mul_smul]
+    rw [Finset.sum_comm]
+  smul_zero v := funext fun i => show ∑ _, _ = _ by simp
+  smul_add N v₁ v₂ := funext fun i => show ∑ _, _ = (∑ _, _) + (∑ _, _) by
+    simp [Finset.sum_add_distrib]
+  add_smul N₁ N₂ v := funext fun i => show ∑ _, _ = (∑ _, _) + (∑ _, _) by
+    simp [add_smul, Finset.sum_add_distrib]
+  zero_smul v := funext fun i => show ∑ _, _ = _ by simp
+
+@[simps]
+def α [Inhabited ι] (M : Type*) [AddCommGroup M] [Module M[ι, A] M] : AddSubgroup M where
+  carrier := Set.range ((stdBasisMatrix (default : ι) (default : ι) (1 : A) : M[ι, A]) • ·)
+  add_mem' := by
+    rintro _ _ ⟨m, rfl⟩ ⟨n, rfl⟩
+    exact ⟨m + n, by simp⟩
+  zero_mem' := ⟨0, by simp⟩
+  neg_mem' := by
+    rintro _ ⟨m, rfl⟩
+    exact ⟨-m, by simp⟩
+
+instance [Inhabited ι] (M : Type*) [AddCommGroup M] [Module M[ι, A] M] :
+    Module A <| α A ι M where
+  smul a x := ⟨(stdBasisMatrix default default a : M[ι, A]) • x.1, by
+    obtain ⟨y, hy⟩ := x.2
+    simp only [α, AddSubgroup.mem_mk, Set.mem_range]
+    refine ⟨(stdBasisMatrix default default a : M[ι, A]) • y, hy ▸ ?_⟩
+    simp only
+    rw [← MulAction.mul_smul, ← MulAction.mul_smul]
+    congr 1
+    ext i j
+    simp⟩
+  one_smul := by
+    rintro ⟨_, ⟨x, rfl⟩⟩
+    ext
+    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _
+    rw [← MulAction.mul_smul]
+    congr 1
+    ext i j
+    simp
+  mul_smul := by
+    rintro a a' ⟨_, ⟨x, rfl⟩⟩
+    ext
+    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • (stdBasisMatrix _ _ _ • _)
+    dsimp only [id_eq, eq_mpr_eq_cast, cast_eq]
+    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← MulAction.mul_smul]
+    congr 1
+    ext i j
+    simp
+  smul_zero a := by
+    ext
+    change stdBasisMatrix _ _ _ • 0 = 0
+    simp
+  smul_add := by
+    rintro a ⟨_, ⟨x, rfl⟩⟩ ⟨_, ⟨y, rfl⟩⟩
+    ext
+    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _ + stdBasisMatrix _ _ _ • _
+    dsimp only [AddSubmonoid.coe_add, AddSubgroup.coe_toAddSubmonoid, α_coe]
+    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← smul_add, ← smul_add,
+      ← MulAction.mul_smul]
+  add_smul := by
+    rintro a b ⟨_, ⟨x, rfl⟩⟩
+    ext
+    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _ + stdBasisMatrix _ _ _ • _
+    dsimp only
+    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← MulAction.mul_smul, ← add_smul,
+      ← add_mul, ← stdBasisMatrix_add]
+  zero_smul := by
+    rintro ⟨_, ⟨x, rfl⟩⟩
+    ext
+    change stdBasisMatrix _ _ _ • _ = _
+    simp only [stdBasisMatrix_zero, zero_smul, ZeroMemClass.coe_zero]
 
 @[simp] lemma RingCon.mem_mapMatrix (I : RingCon A) (x) : x ∈ I.mapMatrix ι ↔ ∀ i j, x i j ∈ I :=
   Iff.rfl
@@ -501,6 +578,64 @@ theorem Wedderburn_Artin'
   classical
   obtain ⟨n, hn, I, inst, e⟩ := Wedderburn_Artin A
   exact ⟨n, hn, (Module.End A I)ᵐᵒᵖ, inferInstance, e⟩
+
+-- This is a lemma on purpose, **don't** attempt to look at its definition
+lemma division_ring_exists_unique_isSimpleModule
+    (S : Type u) [DivisionRing S] (N : Type*) [AddCommGroup N] [Module S N] [IsSimpleModule S N] :
+    Nonempty (N ≃ₗ[S] S) := by
+  have inst4 := IsSimpleModule.nontrivial S N
+  have H := Module.Free.of_divisionRing S N
+  rw [Module.free_iff_set] at H
+  obtain ⟨s, ⟨b⟩⟩ := H
+  if hs1 : s = ∅
+  then
+    subst hs1
+    have := b.index_nonempty
+    simp only [nonempty_subtype, Set.mem_empty_iff_false, exists_const] at this
+  else
+    obtain ⟨i, hi⟩ := Set.nonempty_iff_ne_empty.mpr hs1
+    have eq0 := IsSimpleOrder.eq_bot_or_eq_top (Submodule.span S {b ⟨i, hi⟩}) |>.resolve_left (by
+      intro h
+      simp only [Submodule.span_singleton_eq_bot] at h
+      exact b.ne_zero ⟨i, hi⟩ h)
+    have eq : s = {i} := by
+      refine le_antisymm ?_ (by simpa)
+      simp only [Set.le_eq_subset, Set.subset_singleton_iff]
+      intro j hj
+      have mem : b ⟨j, hj⟩ ∈ Submodule.span S {b ⟨i, hi⟩} := eq0 ▸ ⟨⟩
+      rw [Submodule.mem_span_singleton] at mem
+      obtain ⟨r, hr⟩ := mem
+      have hr' := congr(b.repr $hr)
+      simp only [LinearMapClass.map_smul, Basis.repr_self, Finsupp.smul_single, smul_eq_mul,
+        mul_one] at hr'
+      by_contra rid
+      have hr' := congr($hr' ⟨i, hi⟩)
+      rw [Finsupp.single_eq_same, Finsupp.single_eq_of_ne (h := by simpa)] at hr'
+      subst hr'
+      simp only [zero_smul] at hr
+      exact b.ne_zero _ hr.symm |>.elim
+
+    subst eq
+    refine ⟨b.repr ≪≫ₗ LinearEquiv.ofBijective ⟨⟨fun x => x ⟨i, by simp⟩, ?_⟩, ?_⟩ ⟨?_, ?_⟩⟩
+    · intro x y; simp
+    · intro x y; simp
+    · intro x y hxy; ext; simpa using hxy
+    · intro x; exact ⟨Finsupp.single ⟨i, by simp⟩ x, by simp⟩
+
+universe u'
+
+lemma exists_unique_isSimpleModule
+    (A : Type u) [Ring A] [IsArtinianRing A] [simple : IsSimpleOrder (RingCon A)] :
+    ∃ (M : Type u) (_ : AddCommGroup M) (_ : Module A M), IsSimpleModule A M ∧
+      ∀ (N : Type u') (_ : AddCommGroup N) (_ : Module A N) (_ : IsSimpleModule A N),
+        Nonempty (M ≃ₗ[A] N) := by
+  obtain ⟨n, hn, S, inst1, ⟨e⟩⟩ := Wedderburn_Artin' A
+  have : Inhabited (Fin n) := ⟨⟨0, by omega⟩⟩
+  letI : Module A (Fin n → S) := Module.compHom (Fin n → S) e.toRingHom
+  refine ⟨Fin n → S, inferInstance, inferInstance, ?_, ?_⟩
+  · refine OrderIso.isSimpleOrder (h := (inferInstance : IsSimpleModule S S)) ?_
+    sorry
+  sorry
 
 end simple_ring
 
