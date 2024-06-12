@@ -341,7 +341,36 @@ noncomputable def test (M : ModuleCat M[ι, R]) :
       refine Submodule.smul_mem _ _ ?_
       rw [show _ • x = 0 from Subtype.ext_iff.1 $ congr_fun hx i]
       rfl, fun v => by
-      sorry⟩
+      refine ⟨∑ k : ι, (stdBasisMatrix k default 1 : M[ι, R]) • (v k), ?_⟩
+      simp only [α_coe, map_sum, LinearMapClass.map_smul, LinearMap.coe_mk, AddHom.coe_mk]
+      conv_rhs => rw [show v = ∑ k : ι, Function.update (0 : ι → (α R ι M)) k (v k) by sorry]
+      refine Finset.sum_congr rfl fun i _ => ?_
+      ext j
+      by_cases hij : i = j
+      · subst hij
+        change Subtype.val (∑ _, _) = _
+        simp only [AddSubgroup.val_finset_sum, α_coe, smul_α_coe, Function.update_same]
+        simp_rw [← MulAction.mul_smul, StdBasisMatrix.mul_same, mul_one]
+        rw [Finset.sum_eq_single_of_mem (a := default), StdBasisMatrix.apply_same]
+        pick_goal 2
+        · exact Finset.mem_univ _
+        pick_goal 2
+        · intro j _ hj
+          simp only [stdBasisMatrix, true_and]
+          rw [if_neg, stdBasisMatrix_zero, zero_smul]
+          exact hj.symm
+        obtain ⟨y, hy⟩ := (v i).2
+        rw [← hy]
+        simp only [← MulAction.mul_smul, StdBasisMatrix.mul_same, mul_one]
+      · rw [Function.update_noteq]
+        pick_goal 2
+        · exact Ne.symm hij
+        change Subtype.val (∑ _, _) = 0
+        simp only [AddSubgroup.val_finset_sum, α_coe, smul_α_coe]
+        apply Finset.sum_eq_zero
+        intro k hj
+        rw [StdBasisMatrix.apply_of_ne, stdBasisMatrix_zero, zero_smul]
+        tauto⟩
 
 @[simps]
 noncomputable def matrix.counitIsoHom :
