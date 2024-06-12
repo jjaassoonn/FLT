@@ -6,11 +6,11 @@ open Matrix
 
 open CategoryTheory BigOperators
 
-universe u u' u'' v v' w
+universe u u' u'' v v' v'' w
 
 local notation "M[" ι "," R "]" => Matrix ι ι R
 
-variable (R: Type u) (S : Type u) (T : Type u'') [Ring R] [Ring S] [Ring T]
+variable (R : Type u) [Ring R]
 
 variable (ι : Type w) [Fintype ι] [Inhabited ι] [DecidableEq ι]
 
@@ -175,64 +175,64 @@ def matrix.unitIsoHom :
 
 example : true := rfl
 
--- this never finish compile if uncommented
+set_option maxHeartbeats 400000 in
 @[simps]
 def matrix.unitIsoInv :
     𝟭 (ModuleCat R) ⟶
     toModuleCatOverMatrix R ι ⋙ fromModuleCatOverMatrix R ι  where
   app X :=
-    { toFun := fun x => ⟨fun i => if i = default then x else 0, by sorry
-        -- simp only [toModuleCatOverMatrix_obj, α, AddSubgroup.mem_mk, Set.mem_range]
-        -- refine ⟨fun _ => x, ?_⟩
-        -- refine funext fun i => ?_
-        -- change ∑ _, _ = _
-        -- simp only [stdBasisMatrix, ite_smul, one_smul, zero_smul]
-        -- split_ifs with h
-        -- · subst h
-        --   simp
-        -- · apply Finset.sum_eq_zero
-        --   intro j hj
-        --   rw [if_neg]
-        --   tauto
-          ⟩
+    { toFun := fun x => (⟨Function.update (0 : ι → X) default x, by
+        simp only [toModuleCatOverMatrix_obj, α, AddSubgroup.mem_mk, Set.mem_range]
+        refine ⟨fun _ => x, ?_⟩
+        refine funext fun i => ?_
+        change ∑ _, _ = _
+        simp only [stdBasisMatrix, ite_smul, one_smul, zero_smul, Function.update]
+        split_ifs with h
+        · subst h
+          simp
+        · apply Finset.sum_eq_zero
+          intro j hj
+          rw [if_neg]
+          tauto
+          ⟩ : α R ι (ι → X))
       map_add' := by
         rintro (x : X) (y : X)
         simp only [Functor.comp_obj, toModuleCatOverMatrix_obj, fromModuleCatOverMatrix_obj,
           Functor.id_obj]
         refine Subtype.ext $ funext fun i => ?_
         simp only [toModuleCatOverMatrix_obj]
-        change (if i = default then x + y else 0) =
-          (if i = default then x else 0) + (if i = default then y else 0)
-        split_ifs with h
-        · rfl
-        · rw [add_zero]
+        change _ =
+          (Function.update (0 : ι → X) default x + Function.update (0 : ι → X) default y) i
+        rw [← Function.update_add, zero_add]
       map_smul' := by
         rintro r (x : X)
         simp only [Functor.comp_obj, toModuleCatOverMatrix_obj, fromModuleCatOverMatrix_obj,
           Functor.id_obj, RingHom.id_apply]
         refine Subtype.ext $ funext fun i => ?_
         simp only [toModuleCatOverMatrix_obj]
-        change (if i = default then r • x else 0) =
-          ∑ j : ι, stdBasisMatrix default default r i j • (if j = default then x else 0)
-        simp only [smul_ite, smul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
+        change _ = ∑ _, stdBasisMatrix default default r i _ • _
+        simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite, smul_ite,
+          smul_zero, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
         split_ifs with h
         · subst h
           simp only [StdBasisMatrix.apply_same]
         · rw [StdBasisMatrix.apply_of_row_ne, zero_smul]
-          exact Ne.symm h
-          }
+          exact Ne.symm h }
   naturality {X Y} f := by
     simp only [Functor.id_obj, Functor.comp_obj, toModuleCatOverMatrix_obj,
-        fromModuleCatOverMatrix_obj, Functor.id_map, Functor.comp_map]
+      fromModuleCatOverMatrix_obj, Functor.id_map, Functor.comp_map]
     ext x
+    refine Subtype.ext $ funext fun i => ?_
     simp only [Functor.id_obj, Functor.comp_obj, toModuleCatOverMatrix_obj,
       fromModuleCatOverMatrix_obj, ModuleCat.coe_comp, Function.comp_apply]
 
-    refine Subtype.ext $ funext fun i => ?_
+    erw [LinearMap.coe_mk]
+    rw [AddHom.coe_mk, Subtype.coe_mk, fromModuleCatOverMatrix_map_apply_coe,
+      toModuleCatOverMatrix_map_apply]
+    change Function.update (0 : ι → Y) default (f x) i =
+      f (Function.update (0 : ι → X) default x i)
 
-    change (if i = default then f x else 0) = _
-    rw [fromModuleCatOverMatrix_map_apply_coe, toModuleCatOverMatrix_map_apply]
-    change _ = f (if _ then _ else _)
+    simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite]
     split_ifs with h
     · rfl
     · rw [map_zero]
@@ -255,7 +255,7 @@ def matrix.unitIso :
     erw [matrix.unitIsoInv_app_apply_coe]
     change _ = ∑ _, _
     erw [matrix.unitIsoHom_app_apply]
-    simp only [Functor.id_obj]
+    simp only [Function.update, Functor.id_obj, eq_rec_constant, Pi.zero_apply, dite_eq_ite]
     split_ifs with h
     · refine Finset.sum_congr rfl fun i _ => ?_
       change ∑ _, _ = _
@@ -280,13 +280,12 @@ def matrix.unitIso :
       fromModuleCatOverMatrix_obj, ModuleCat.coe_comp, Function.comp_apply, NatTrans.id_app,
       ModuleCat.id_apply]
     erw [matrix.unitIsoHom_app_apply]
-    change (∑ i : ι, if i = default then x else 0) = x
-    simp
+    change (∑ i : ι, Function.update (0 : ι → X) default x i) = x
+    simp [Function.update]
 
 example : true := rfl
 
-
-@[simps?!]
+@[simps!]
 noncomputable def test (M : ModuleCat M[ι, R]) :
     M ≅ (fromModuleCatOverMatrix R ι ⋙ toModuleCatOverMatrix R ι).obj M :=
   LinearEquiv.toModuleIso $ LinearEquiv.ofBijective
@@ -437,37 +436,40 @@ noncomputable def moritaEquivlentToMatrix : ModuleCat R ≌ ModuleCat M[ι, R] w
     refine funext fun j => ?_
     erw [matrix.unitIsoInv_app_apply_coe]
     change _ = ∑ _, _
-    simp only [stdBasisMatrix, ite_smul, one_smul, zero_smul]
+    simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite, stdBasisMatrix,
+      ite_smul, one_smul, zero_smul]
     split_ifs with h
     · subst h; simp
     · refine Eq.symm $ Finset.sum_eq_zero fun k _ => ?_
       rw [if_neg]; tauto
 
-structure MoritaEquivalent :=
-equiv : ModuleCat R ≌ ModuleCat S
+class IsMoritaEquivalent
+  (R : Type u) (S : Type u') [Ring R] [Ring S] : Prop :=
+out : Nonempty $ ModuleCat.{v} R ≌ ModuleCat.{v'} S
 
-namespace MoritaEquivalent
+namespace IsMoritaEquivalent
 
--- noncomputable def equiv [MoritaEquivalent R S] : ModuleCat R ≌ ModuleCat S :=
---   (inferInstance : MoritaEquivalent R S) |>.out.some
+variable (R : Type u) (S : Type u') (T : Type u'') [Ring R] [Ring S] [Ring T]
 
--- @[refl]
--- lemma refl : MoritaEquivalent R R :=
--- ⟨⟨CategoryTheory.Equivalence.refl (C := ModuleCat R)⟩⟩
+noncomputable def equiv [IsMoritaEquivalent R S] : ModuleCat R ≌ ModuleCat S :=
+  (inferInstance : IsMoritaEquivalent R S) |>.out.some
 
--- instance : MoritaEquivalent R R := refl R
+@[refl]
+lemma refl : IsMoritaEquivalent.{u, u, v, v} R R :=
+⟨⟨CategoryTheory.Equivalence.refl (C := ModuleCat.{v} R)⟩⟩
 
--- @[symm]
--- lemma symm [MoritaEquivalent.{u, v} R S] : MoritaEquivalent.{u, v} S R where
---   out := ⟨equiv R S |>.symm⟩
+instance : IsMoritaEquivalent R R := refl R
 
--- @[trans]
--- lemma trans [MoritaEquivalent.{u, v} R S] [MoritaEquivalent.{u, v} S T] :
---     MoritaEquivalent.{u, v} R T where
---   out := ⟨(equiv R S).trans $ equiv S T⟩
+@[symm]
+lemma symm [IsMoritaEquivalent.{u, u', v, v'} R S] : IsMoritaEquivalent.{u', u, v', v} S R where
+  out := ⟨equiv R S |>.symm⟩
 
-section matrix
+@[trans]
+lemma trans [IsMoritaEquivalent.{u, u', v, v'} R S] [IsMoritaEquivalent.{u', u'', v', v''} S T] :
+    IsMoritaEquivalent.{u, u'', v, v''} R T where
+  out := ⟨(equiv R S).trans $ equiv S T⟩
 
-end matrix
+instance matrix (n : ℕ) : IsMoritaEquivalent.{u, u, v, v} R M[Fin (n + 1), R] where
+  out := ⟨moritaEquivlentToMatrix R (Fin (n + 1))⟩
 
-end MoritaEquivalent
+end IsMoritaEquivalent
