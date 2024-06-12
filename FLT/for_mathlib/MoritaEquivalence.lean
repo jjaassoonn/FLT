@@ -361,20 +361,58 @@ noncomputable def matrix.counitIsoHom :
     rw [← f.map_smul]
     erw [test_hom_apply_coe]
 
-def matrix.counitIso :
+@[simps]
+noncomputable def matrix.counitIsoInv :
+    𝟭 (ModuleCat M[ι, R]) ⟶
+    fromModuleCatOverMatrix R ι ⋙ toModuleCatOverMatrix R ι where
+  app M := (test R ι M).hom
+  naturality X Y f := by
+    simp only [Functor.id_obj, Functor.comp_obj, fromModuleCatOverMatrix_obj,
+      toModuleCatOverMatrix_obj, Functor.id_map, Functor.comp_map]
+    ext x
+    simp only [Functor.comp_obj, fromModuleCatOverMatrix_obj, toModuleCatOverMatrix_obj,
+      ModuleCat.coe_comp, Function.comp_apply]
+    refine funext fun i => Subtype.ext ?_
+    erw [test_hom_apply_coe]
+    rw [toModuleCatOverMatrix_map_apply, fromModuleCatOverMatrix_map_apply_coe]
+    erw [test_hom_apply_coe]
+    rw [f.map_smul]
+
+@[simps]
+noncomputable def matrix.counitIso :
     fromModuleCatOverMatrix R ι ⋙ toModuleCatOverMatrix R ι ≅ 𝟭 (ModuleCat M[ι, R]) where
   hom := matrix.counitIsoHom R ι
-  inv := _
-  hom_inv_id := _
-  inv_hom_id := _
+  inv := matrix.counitIsoInv R ι
+  hom_inv_id := by ext X x; simp
+  inv_hom_id := by ext; simp
 
 
-def moritaEquivlentToMatrix : ModuleCat R ≌ ModuleCat M[ι, R] where
+@[simps]
+noncomputable def moritaEquivlentToMatrix : ModuleCat R ≌ ModuleCat M[ι, R] where
   functor := toModuleCatOverMatrix R ι
   inverse := fromModuleCatOverMatrix R ι
   unitIso := matrix.unitIso R ι |>.symm
-  counitIso := _
-  functor_unitIso_comp := _
+  counitIso := matrix.counitIso R ι
+  functor_unitIso_comp X := by
+    simp only [Functor.id_obj, toModuleCatOverMatrix_obj, Functor.comp_obj,
+      fromModuleCatOverMatrix_obj, Iso.symm_hom, matrix.unitIso_inv, matrix.counitIso_hom]
+    ext (x : ι → X)
+    simp only [matrix.counitIsoHom_app, Functor.comp_obj, fromModuleCatOverMatrix_obj,
+      toModuleCatOverMatrix_obj, ModuleCat.coe_comp, Function.comp_apply, ModuleCat.id_apply]
+    apply_fun (test R ι _).hom using LinearEquiv.injective _
+    erw [Iso.inv_hom_id_apply (test R ι _)]
+    simp only [Functor.comp_obj, fromModuleCatOverMatrix_obj, toModuleCatOverMatrix_obj]
+    refine funext fun i => Subtype.ext ?_
+    erw [test_hom_apply_coe]
+    rw [toModuleCatOverMatrix_map_apply]
+    refine funext fun j => ?_
+    erw [matrix.unitIsoInv_app_apply_coe]
+    change _ = ∑ _, _
+    simp only [stdBasisMatrix, ite_smul, one_smul, zero_smul]
+    split_ifs with h
+    · subst h; simp
+    · refine Eq.symm $ Finset.sum_eq_zero fun k _ => ?_
+      rw [if_neg]; tauto
 
 structure MoritaEquivalent :=
 equiv : ModuleCat R ≌ ModuleCat S
