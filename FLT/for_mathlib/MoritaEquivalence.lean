@@ -290,15 +290,58 @@ example : true := rfl
 noncomputable def test (M : ModuleCat M[ι, R]) :
     M ≅ (fromModuleCatOverMatrix R ι ⋙ toModuleCatOverMatrix R ι).obj M :=
   LinearEquiv.toModuleIso $ LinearEquiv.ofBijective
-    { toFun := fun m i => ⟨(stdBasisMatrix default i 1 : M[ι, R]) • m, by
+    ({toFun := fun m i => ⟨(stdBasisMatrix default i 1 : M[ι, R]) • m, by
         simp only [α, AddSubgroup.mem_mk, Set.mem_range]
         refine ⟨(stdBasisMatrix default i 1 : M[ι, R]) • m, ?_⟩
         simp only [← MulAction.mul_smul, StdBasisMatrix.mul_same, mul_one]⟩
-      map_add' := fun x y => funext fun i => Subtype.ext $ sorry
-        -- show (stdBasisMatrix default i 1 : M[ι, R]) • (x + y) =
-        --   (stdBasisMatrix default i 1 : M[ι, R]) • x +
-        --   (stdBasisMatrix default i 1 : M[ι, R]) • y from _
-      map_smul' := sorry } ⟨sorry, sorry⟩
+      map_add' := fun x y => funext fun i => Subtype.ext $
+        show (stdBasisMatrix default i 1 : M[ι, R]) • (x + y) =
+          (stdBasisMatrix default i 1 : M[ι, R]) • x +
+          (stdBasisMatrix default i 1 : M[ι, R]) • y from smul_add _ _ _
+      map_smul' := fun x m => funext fun i => Subtype.ext $ by
+        simp only [RingHom.id_apply]
+        change _ = Subtype.val (∑ _, _)
+        simp only [AddSubgroup.val_finset_sum, α_coe, smul_α_coe]
+
+        simp_rw [← MulAction.mul_smul, StdBasisMatrix.mul_same, mul_one, ← Finset.sum_smul]
+        congr 2
+        conv_lhs => rw [matrix_eq_sum_std_basis x]
+        rw [Finset.mul_sum]
+        simp_rw [Finset.mul_sum]
+        rw [Finset.sum_eq_single_of_mem (a := i)]
+        pick_goal 2
+        · exact Finset.mem_univ i
+
+        pick_goal 2
+        · intro j _ hj
+          apply Finset.sum_eq_zero
+          intro k _
+          rw [StdBasisMatrix.mul_of_ne]
+          exact hj.symm
+        simp_rw [StdBasisMatrix.mul_same, one_mul] } : M →ₗ[M[ι, R]] ι → (α R ι ↑M))
+    ⟨by
+      rw [← LinearMap.ker_eq_bot, eq_bot_iff]
+      rintro x (hx : _ = 0)
+      simp only [LinearMap.coe_mk, AddHom.coe_mk] at hx
+      rw [show x = ∑ i : ι, (stdBasisMatrix i i 1 : M[ι, R]) • x by
+        rw [← Finset.sum_smul, show ∑ i : ι, (stdBasisMatrix i i 1 : M[ι, R]) = 1 by
+          ext
+          simp only [sum_apply, stdBasisMatrix, one_apply]
+          split_ifs with h
+          · subst h; simp
+          · apply Finset.sum_eq_zero
+            intro k _
+            rw [if_neg]
+            contrapose! h
+            aesop, one_smul]]
+      refine Submodule.sum_mem _ fun i _ => ?_
+      rw [show (stdBasisMatrix i i 1 : M[ι, R]) =
+        stdBasisMatrix i default 1 * stdBasisMatrix default i 1
+        by rw [StdBasisMatrix.mul_same, one_mul], MulAction.mul_smul]
+      refine Submodule.smul_mem _ _ ?_
+      rw [show _ • x = 0 from Subtype.ext_iff.1 $ congr_fun hx i]
+      rfl, fun v => by
+      sorry⟩
 
 @[simps]
 noncomputable def matrix.counitIsoHom :
