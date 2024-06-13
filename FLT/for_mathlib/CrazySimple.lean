@@ -4,7 +4,7 @@ import FLT.for_mathlib.Con
 import Mathlib.Algebra.Quaternion
 import Mathlib.Algebra.Ring.Equiv
 import Mathlib.LinearAlgebra.Matrix.IsDiag
-import Mathlib.Algebra.Module.Submodule.Pointwise
+import FLT.for_mathlib.MoritaEquivalence
 
 variable (A : Type*) [Ring A]
 
@@ -14,7 +14,7 @@ local notation "M[" ι "," R "]" => Matrix ι ι R
 
 section two_two_one
 
-variable (ι : Type*) [Fintype ι] [h : Nonempty ι] [DecidableEq ι]
+variable (ι : Type) [Fintype ι] [h : Nonempty ι] [DecidableEq ι]
 
 /--
 If `I` is a two-sided-ideal of `A`, then `Mₙ(I) := {(xᵢⱼ) | ∀ i j, xᵢⱼ ∈ I}` is a two-sided-ideal of
@@ -32,177 +32,29 @@ def RingCon.mapMatrix (I : RingCon A) : RingCon M[ι, A] where
   add' {X X' Y Y'} h h' := fun i j ↦ by
     simpa only [Matrix.add_apply] using I.add (h _ _) (h' _ _)
 
-instance (M : Type*) [AddCommGroup M] [Module A M] : Module M[ι, A] (ι → M) where
-  smul N v i := ∑ j : ι, N i j • v j
-  one_smul v := funext fun i => show ∑ _, _ = _ by simp [one_apply]
-  mul_smul N₁ N₂ v := funext fun i => show ∑ _, _ = ∑ _, _ • (∑ _, _) by
-    simp_rw [mul_apply, Finset.smul_sum, Finset.sum_smul, MulAction.mul_smul]
-    rw [Finset.sum_comm]
-  smul_zero v := funext fun i => show ∑ _, _ = _ by simp
-  smul_add N v₁ v₂ := funext fun i => show ∑ _, _ = (∑ _, _) + (∑ _, _) by
-    simp [Finset.sum_add_distrib]
-  add_smul N₁ N₂ v := funext fun i => show ∑ _, _ = (∑ _, _) + (∑ _, _) by
-    simp [add_smul, Finset.sum_add_distrib]
-  zero_smul v := funext fun i => show ∑ _, _ = _ by simp
-
--- bad name
-@[simps]
-def LinearMap.equivMatrix [Inhabited ι] {M N : Type*} [AddCommGroup M] [Module A M] [AddCommGroup N] [Module A N] :
-    (M →ₗ[A] N) ≃ ((ι → M) →ₗ[M[ι, A]] (ι → N)) where
-  toFun f :=
-  { toFun := fun v i => f $ v i
-    map_add' := by intros; ext; simp
-    map_smul' := by
-      intros m v
-      simp only [RingHom.id_apply]
-      ext i
-      change f (∑ _, _) = ∑ _, _
-      simp }
-  invFun f :=
-  { toFun := fun x => f (Function.update (0 : ι → M) default x) default
-    map_add' := by
-      intros x y
-      simp only
-      rw [show Function.update (0 : ι → M) default (x + y) =
-        (Function.update (0 : ι → M) default x) + (Function.update (0 : ι → M) default y) by
-        rw [← Function.update_add, zero_add], map_add]
-      rfl
-    map_smul' := by
-      intros a x
-      simp only [RingHom.id_apply]
-      rw [show Function.update (0 : ι → M) default (a • x) =
-        a • Function.update (0 : ι → M) default x by
-        rw [← Function.update_smul, smul_zero]]
-      rw [show (a • Function.update (0 : ι → M) default x : ι → M) =
-        (diagonal fun _ => a : M[ι, A]) • (Function.update (0 : ι → M) default x : ι → M) by
-        ext i; change _ = ∑ _, _; simp [diagonal], f.map_smul,
-        show a • f (Function.update (0 : ι → M) default x) default =
-        ((diagonal fun _ => a : M[ι, A]) • f (Function.update (0 : ι → M) default x)) default by
-        change _ = ∑ _, _; simp [diagonal]] }
-  left_inv f := LinearMap.ext fun x => by simp
-  right_inv f := by
-    ext v i
-    simp only [coe_mk, AddHom.coe_mk]
-    rw [show (Function.update 0 default (v i) : ι → M) = (stdBasisMatrix default i 1 : M[ι, A]) • v by
-      ext j
-      change _ = ∑ _, _
-      simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite, stdBasisMatrix,
-        ite_smul, one_smul, zero_smul]
-      split_ifs with h
-      · subst h; simp
-      · exact Eq.symm $ Finset.sum_eq_zero fun i _ => if_neg (by tauto), f.map_smul]
-    change ∑ _, _ = _
-    simp [stdBasisMatrix]
-
--- is this what we want?
--- https://planetmath.org/moritaequivalence I think this is what we want
-@[simps]
-def α [Inhabited ι] (M : Type*) [AddCommGroup M] [Module M[ι, A] M] : AddSubgroup M where
-  carrier := Set.range ((stdBasisMatrix (default : ι) (default : ι) (1 : A) : M[ι, A]) • ·)
-  add_mem' := by
-    rintro _ _ ⟨m, rfl⟩ ⟨n, rfl⟩
-    exact ⟨m + n, by simp⟩
-  zero_mem' := ⟨0, by simp⟩
-  neg_mem' := by
-    rintro _ ⟨m, rfl⟩
-    exact ⟨-m, by simp⟩
-
-instance [Inhabited ι] (M : Type*) [AddCommGroup M] [Module M[ι, A] M] :
-    Module A <| α A ι M where
-  smul a x := ⟨(stdBasisMatrix default default a : M[ι, A]) • x.1, by
-    obtain ⟨y, hy⟩ := x.2
-    simp only [α, AddSubgroup.mem_mk, Set.mem_range]
-    refine ⟨(stdBasisMatrix default default a : M[ι, A]) • y, hy ▸ ?_⟩
-    simp only
-    rw [← MulAction.mul_smul, ← MulAction.mul_smul]
-    congr 1
-    ext i j
-    simp⟩
-  one_smul := by
-    rintro ⟨_, ⟨x, rfl⟩⟩
-    ext
-    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _
-    rw [← MulAction.mul_smul]
-    congr 1
-    ext i j
-    simp
-  mul_smul := by
-    rintro a a' ⟨_, ⟨x, rfl⟩⟩
-    ext
-    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • (stdBasisMatrix _ _ _ • _)
-    dsimp only [id_eq, eq_mpr_eq_cast, cast_eq]
-    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← MulAction.mul_smul]
-    congr 1
-    ext i j
-    simp
-  smul_zero a := by
-    ext
-    change stdBasisMatrix _ _ _ • 0 = 0
-    simp
-  smul_add := by
-    rintro a ⟨_, ⟨x, rfl⟩⟩ ⟨_, ⟨y, rfl⟩⟩
-    ext
-    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _ + stdBasisMatrix _ _ _ • _
-    dsimp only [AddSubmonoid.coe_add, AddSubgroup.coe_toAddSubmonoid, α_coe]
-    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← smul_add, ← smul_add,
-      ← MulAction.mul_smul]
-  add_smul := by
-    rintro a b ⟨_, ⟨x, rfl⟩⟩
-    ext
-    change stdBasisMatrix _ _ _ • _ = stdBasisMatrix _ _ _ • _ + stdBasisMatrix _ _ _ • _
-    dsimp only
-    rw [← MulAction.mul_smul, ← MulAction.mul_smul, ← MulAction.mul_smul, ← add_smul,
-      ← add_mul, ← stdBasisMatrix_add]
-  zero_smul := by
-    rintro ⟨_, ⟨x, rfl⟩⟩
-    ext
-    change stdBasisMatrix _ _ _ • _ = _
-    simp only [stdBasisMatrix_zero, zero_smul, ZeroMemClass.coe_zero]
-
-example : true := rfl
-
--- adjoint functor
-def LinearMap.homEquivMatrix [Inhabited ι]
-    (M N : Type*) [AddCommGroup M] [Module A M] [AddCommGroup N] [Module M[ι, A] N] :
-    (M →ₗ[A] α A ι N) ≃
-    ((ι → M) →ₗ[M[ι, A]] N) where
-  toFun f :=
-  { toFun := fun v => f $ ∑ i : ι, v i
-    map_add' := fun _ _ => by
-      simp only [α_coe, Pi.add_apply, map_sum, map_add, AddSubgroup.val_finset_sum,
-        AddSubmonoid.coe_add, AddSubgroup.coe_toAddSubmonoid]
-      rw [← Finset.sum_add_distrib]
-    map_smul' := by
-      intros x v
-      simp only [α_coe, map_sum, AddSubgroup.val_finset_sum, RingHom.id_apply, Finset.smul_sum]
-      refine Finset.sum_congr rfl fun i _ => ?_
-      change (f (∑ _, _) : N) = _
-      simp only [α_coe, map_sum, LinearMapClass.map_smul, AddSubgroup.val_finset_sum]
-      change ∑ _, stdBasisMatrix _ _ _ • _ = _
-
-      -- simp only [α_coe, map_sum, LinearMapClass.map_smul, AddSubgroup.val_finset_sum]
-      have (m : M) : ∃ x, (f m : N) = (stdBasisMatrix default default 1 : M[ι, A]) • x := by
-        obtain ⟨x, hx⟩ := (f m).2
-        rw [← hx]; simp
-      choose y hy using this
-      change ∑ i : ι, stdBasisMatrix _ _ _ • _ = _
-      simp_rw [hy, ← MulAction.mul_smul]
-      simp only [StdBasisMatrix.mul_same, mul_one]
-      -- simp? [stdBasisMatrix]
-      sorry }
-  invFun := _
-  left_inv := _
-  right_inv := _
-
+open fromModuleCatOverMatrix in
 -- This should be similar to `matrix_iff'`, but I just don't know how to prove it.
-lemma IsSimpleModule.matrix_iff [Inhabited ι] (M : Type*) [AddCommGroup M] [Module M[ι, A] M] :
+lemma IsSimpleModule.matrix_iff [Inhabited ι] (M : Type u_1) [AddCommGroup M] [Module M[ι, A] M] :
     IsSimpleModule M[ι, A] M ↔ IsSimpleModule A (α A ι M) := by
-
   constructor
   · intro inst1
     have : Nontrivial (Submodule A (α A ι M)) := by
-      -- In particular, this is to prove `α A ι M ≠ ⊥`, i.e. `e₁₁ x ≠ 0` for some `0`.
-      -- I don't know how to prove it.
+      refine ⟨⊥, ⊤, fun rid => ?_⟩
+      -- write R-Module -F-> Rₙₙ-Module and
+      -- write Rₙₙ-Module -G-> R-Module.
+
+      -- Indeed, if ⊥ = ⊤ as submodules of α A ι M, then
+      -- ⊥ = F(⊥) ⟶ F(⊤) = ⊤ is an isomorphism of Rₙₙ-Modules.
+      -- this contradicts the assumption that M is simple as an Rₙₙ-Module.
+
+      let f :
+        (toModuleCatOverMatrix A ι).obj (.of _ (⊥ : Submodule A (α A ι M))) ⟶
+        (toModuleCatOverMatrix A ι).obj (.of _ (⊤ : Submodule A (α A ι M))) :=
+        (toModuleCatOverMatrix A ι).map (CategoryTheory.eqToHom $ by rw [rid])
+      let f' := (moritaEquivalentToMatrix A ι).counit.app (.of _ M) ∘ₗ
+        -- easy sorry
+        (sorry : (ι → (⊤ : Submodule A (α A ι M))) →ₗ[M[ι, A]] (ι → α A ι M)) ∘ₗ f
+
       sorry
     refine ⟨fun x => ?_⟩
     sorry
@@ -458,7 +310,7 @@ def matrixEquivMatrixMop (n : ℕ) (D : Type*) [Ring D] :
   map_mul' x y := unop_injective $ by ext; simp [transpose_map, transpose_apply, mul_apply]
   map_add' x y := by aesop
 
-instance matrix_simple_ring (ι : Type*) [ne : Nonempty ι] [Fintype ι] [DecidableEq ι]
+instance matrix_simple_ring (ι : Type) [ne : Nonempty ι] [Fintype ι] [DecidableEq ι]
     (R : Type*) [Ring R] [IsSimpleOrder (RingCon R)] :
     IsSimpleOrder (RingCon M[ι, R]) :=
   RingCon.equivRingConMatrix' _ ι (ne.some) |>.symm.isSimpleOrder

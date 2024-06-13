@@ -191,7 +191,7 @@ def matrix.unitIsoInv :
         · subst h
           simp
         · apply Finset.sum_eq_zero
-          intro j hj
+          intro j _
           rw [if_neg]
           tauto
           ⟩ : α R ι (ι → X))
@@ -416,7 +416,7 @@ noncomputable def matrix.counitIso :
 
 
 @[simps]
-noncomputable def moritaEquivlentToMatrix : ModuleCat R ≌ ModuleCat M[ι, R] where
+noncomputable def moritaEquivalentToMatrix : ModuleCat R ≌ ModuleCat M[ι, R] where
   functor := toModuleCatOverMatrix R ι
   inverse := fromModuleCatOverMatrix R ι
   unitIso := matrix.unitIso R ι |>.symm
@@ -454,6 +454,13 @@ variable (R : Type u) (S : Type u') (T : Type u'') [Ring R] [Ring S] [Ring T]
 noncomputable def equiv [IsMoritaEquivalent R S] : ModuleCat R ≌ ModuleCat S :=
   (inferInstance : IsMoritaEquivalent R S) |>.out.some
 
+
+instance [IsMoritaEquivalent R S] : (equiv R S).functor.Additive :=
+Functor.additive_of_preserves_binary_products _
+
+instance [IsMoritaEquivalent R S] : (equiv R S).inverse.Additive :=
+inferInstance
+
 @[refl]
 lemma refl : IsMoritaEquivalent.{u, u, v, v} R R :=
 ⟨⟨CategoryTheory.Equivalence.refl (C := ModuleCat.{v} R)⟩⟩
@@ -470,6 +477,6 @@ lemma trans [IsMoritaEquivalent.{u, u', v, v'} R S] [IsMoritaEquivalent.{u', u''
   out := ⟨(equiv R S).trans $ equiv S T⟩
 
 instance matrix (n : ℕ) : IsMoritaEquivalent.{u, u, v, v} R M[Fin (n + 1), R] where
-  out := ⟨moritaEquivlentToMatrix R (Fin (n + 1))⟩
+  out := ⟨moritaEquivalentToMatrix R (Fin (n + 1))⟩
 
 end IsMoritaEquivalent
