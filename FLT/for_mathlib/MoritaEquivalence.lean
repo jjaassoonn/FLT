@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
 import Mathlib.CategoryTheory.Elementwise
+import Mathlib.Algebra.Module.LinearMap.End
 
 open Matrix
 
@@ -478,5 +479,99 @@ lemma trans [IsMoritaEquivalent.{u, u', v, v'} R S] [IsMoritaEquivalent.{u', u''
 
 instance matrix (n : ℕ) : IsMoritaEquivalent.{u, u, v, v} R M[Fin (n + 1), R] where
   out := ⟨moritaEquivalentToMatrix R (Fin (n + 1))⟩
+
+section division_ring
+
+variable (R : Type u) (S : Type u') [DivisionRing R] [DivisionRing S]
+variable (e : ModuleCat.{v, u} R ≌ ModuleCat.{v', u'} S)
+
+variable {M : Type*} [AddCommGroup M] [Module R M]
+
+instance  : SMul R $ (R →ₗ[R] M) where
+  smul r f :=
+  { toFun := fun x => f (x * r)
+    map_add' := fun x y => by simp [add_mul, map_add]
+    map_smul' := fun m x => by
+      simp only [smul_eq_mul, RingHom.id_apply]
+      rw [← f.map_smul, smul_eq_mul, mul_assoc] }
+
+@[simp]
+lemma smul_linearMap_apply (r x : R) (f : R →ₗ[R] M) : (r • f) x = f (x * r) := rfl
+
+instance : Module R $ (R →ₗ[R] M) where
+  one_smul f := by ext; simp
+  mul_smul x y f := by ext; simp
+  smul_zero r := by ext; simp
+  smul_add r f g := by ext; simp
+  add_smul a b f := by ext; simp
+  zero_smul f := by ext; simp
+
+instance (M : ModuleCat R) : Module R $ ModuleCat.of R R ⟶ M :=
+inferInstanceAs $ Module R $ R →ₗ[R] M
+
+@[simps]
+def Hom : ModuleCat.{u, u} R ⥤ ModuleCat.{u, u} R where
+  obj X := ModuleCat.of R $ ModuleCat.of R R ⟶ X
+  map {X Y} f :=
+  { toFun := fun x =>
+    { toFun := fun r => f $ x.toFun r
+      map_add' := by
+        rintro (a b : R)
+        simp
+      map_smul' := by
+        rintro (a b : R)
+        change (R →ₗ[R] X) at x
+        dsimp only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, smul_eq_mul, AddHom.coe_mk,
+          RingHom.id_apply]
+        rw [← smul_linearMap_apply, ← f.map_smul]
+        erw [← x.map_smul a b]
+        congr }
+    map_add' := by
+      rintro (x y : R →ₗ[R] X)
+      simp only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom]
+      refine LinearMap.ext fun (r : R) => ?_
+      simp only [LinearMap.coe_mk, AddHom.coe_mk]
+      change (f $ (x + y) r) = (f $ x r) + (f $ y r)
+      simp
+    map_smul' := by
+      rintro r (x : R →ₗ[R] X)
+      simp only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, RingHom.id_apply]
+      refine LinearMap.ext fun (a : R) => ?_
+      change f _ = f _
+      congr }
+  map_id X := LinearMap.ext fun r => rfl
+  map_comp f g:= LinearMap.ext fun r => rfl
+
+@[simps]
+def EndHomToModuleEndMop : End (Hom R) →+* (Module.End R R)ᵐᵒᵖ where
+  toFun n := .op $ n.app (.of R R) (𝟙 _)
+  map_one' := by
+    simp only [Hom_obj, End.one_def, NatTrans.id_app, ModuleCat.id_apply]
+    rfl
+  map_mul' := by
+    intro m n
+    simp only [Hom_obj, End.mul_def, NatTrans.comp_app, ModuleCat.coe_comp, Function.comp_apply]
+    apply_fun MulOpposite.unop using MulOpposite.unop_injective
+    exact congr($(m.naturality (n.app (.of R R) (𝟙 _))) (𝟙 _))
+  map_zero' := by
+    simp only [Hom_obj, Limits.zero_app, MulOpposite.op_eq_zero_iff]
+    rfl
+  map_add' := by intro m n; rfl
+
+-- this is wrong
+-- example : R →+* End (Hom R) where
+--   toFun a :=
+--   { app := fun X =>
+--     { toFun := fun g => a • g
+--       map_add' := by sorry
+--       map_smul' := by -- this is not provable
+--         sorry }
+--     naturality := sorry }
+--   map_one' := sorry
+--   map_mul' m n := sorry
+--   map_zero' := sorry
+--   map_add' := sorry
+
+end division_ring
 
 end IsMoritaEquivalent
