@@ -50,7 +50,7 @@ lemma IsCentralSimple.center_eq
 variable (K : Type u) [Field K]
 
 open Matrix in
-instance MatrixRing.isCentralSimple (ι : Type v) [Fintype ι] [Nonempty ι] [DecidableEq ι] :
+instance MatrixRing.isCentralSimple (ι : Type) [Fintype ι] [Nonempty ι] [DecidableEq ι] :
     IsCentralSimple K (Matrix ι ι K) where
   is_central _ h := mem_range_scalar_of_commute_stdBasisMatrix fun _ _ _ =>
     Subalgebra.mem_center_iff.mp h _

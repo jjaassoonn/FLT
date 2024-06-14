@@ -32,117 +32,6 @@ def RingCon.mapMatrix (I : RingCon A) : RingCon M[ι, A] where
   add' {X X' Y Y'} h h' := fun i j ↦ by
     simpa only [Matrix.add_apply] using I.add (h _ _) (h' _ _)
 
-open fromModuleCatOverMatrix in
--- This should be similar to `matrix_iff'`, but I just don't know how to prove it.
-lemma IsSimpleModule.matrix_iff [Inhabited ι] (M : Type u_1) [AddCommGroup M] [Module M[ι, A] M] :
-    IsSimpleModule M[ι, A] M ↔ IsSimpleModule A (α A ι M) := by
-  constructor
-  · intro inst1
-    have : Nontrivial (Submodule A (α A ι M)) := by
-      refine ⟨⊥, ⊤, fun rid => ?_⟩
-      -- write R-Module -F-> Rₙₙ-Module and
-      -- write Rₙₙ-Module -G-> R-Module.
-
-      -- Indeed, if ⊥ = ⊤ as submodules of α A ι M, then
-      -- ⊥ = F(⊥) ⟶ F(⊤) = ⊤ is an isomorphism of Rₙₙ-Modules.
-      -- this contradicts the assumption that M is simple as an Rₙₙ-Module.
-
-      let f :
-        (toModuleCatOverMatrix A ι).obj (.of _ (⊥ : Submodule A (α A ι M))) ⟶
-        (toModuleCatOverMatrix A ι).obj (.of _ (⊤ : Submodule A (α A ι M))) :=
-        (toModuleCatOverMatrix A ι).map (CategoryTheory.eqToHom $ by rw [rid])
-      let f' := (moritaEquivalentToMatrix A ι).counit.app (.of _ M) ∘ₗ
-        -- easy sorry
-        (sorry : (ι → (⊤ : Submodule A (α A ι M))) →ₗ[M[ι, A]] (ι → α A ι M)) ∘ₗ f
-
-      sorry
-    refine ⟨fun x => ?_⟩
-    sorry
-  · sorry
-
-lemma IsSimpleModule.matrix_iff' [Inhabited ι] (M : Type*) [AddCommGroup M] [Module A M] :
-    IsSimpleModule M[ι, A] (ι → M) ↔ IsSimpleModule A M := by
-  constructor
-  · intro inst1
-    have : Nontrivial (Submodule A M) := by
-      refine ⟨⊥, ⊤, fun rid => bot_ne_top (α := Submodule M[ι, A] (ι → M)) $ eq_top_iff.2
-        fun x _ => funext fun j => show x j ∈ (⊥ : Submodule A M) from rid ▸ ⟨⟩⟩
-    refine ⟨fun x => ?_⟩
-    obtain (h|h) := inst1.2
-      (Submodule.span _ (⋃ (i : ι) (m ∈ x), {Function.update (0 : ι → M) i m}))
-    · refine Or.inl $ eq_bot_iff.2 fun a ha => ?_
-      simp_rw [Submodule.span_iUnion₂, iSup_eq_bot, Submodule.span_iUnion, iSup_eq_bot,
-        Submodule.span_singleton_eq_bot] at h
-      simpa using congr_fun (h default a ha) (default : ι)
-    · refine Or.inr $ eq_top_iff.2 fun a _ => ?_
-      have mem : Function.update (0 : ι → M) default a ∈ (⊤ : Submodule M[ι, A] _) := ⟨⟩
-      rw [← h, mem_span_set] at mem
-      obtain ⟨c, hc1, eq⟩ := mem
-      have eq' := congr_fun eq default
-      simp only [Finsupp.sum, Finset.sum_apply, Function.update_same] at eq'
-      rw [← eq']
-      refine x.sum_mem fun j hj => ?_
-      specialize hc1 hj
-      simp only [Set.mem_iUnion, Set.mem_singleton_iff, exists_prop] at hc1
-      obtain ⟨i, j, hj', rfl⟩ := hc1
-      change ∑ _, _ ∈ x
-      refine x.sum_mem fun k _ => x.smul_mem _ ?_
-      simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite]
-      split_ifs <;> aesop
-  · intro inst1
-    have : Nontrivial (Submodule M[ι, A] (ι → M)) := by
-      refine ⟨⊥, ⊤, fun rid => bot_ne_top (α := Submodule A M) $ eq_top_iff.2 fun x _ => ?_⟩
-      have : Function.update (0 : ι → M) default x ∈ (⊤ : Submodule M[ι, A] (ι → M)) := ⟨⟩
-      rw [← rid] at this
-      have := congr_fun this default
-      simpa using this
-    refine ⟨fun x => ?_⟩
-    obtain (h|h) := inst1.2 (Submodule.span A (⋃ (f ∈ x), {f default}))
-    · refine Or.inl $ eq_bot_iff.2 fun a ha => funext fun i => show a i = 0 from ?_ -- eq_bot_iff.1 h $
-      have : ((stdBasisMatrix default i 1 : M[ι, A]) • a) default = a i := by
-        change ∑ _, _ = _
-        simp [stdBasisMatrix, Finset.sum_ite]
-      rw [← this]
-      change _ ∈ (⊥ : Submodule A M)
-      rw [← h]
-      refine Submodule.subset_span ?_
-      simp only [Set.mem_iUnion, Set.mem_singleton_iff, exists_prop]
-      exact ⟨_, x.smul_mem _ ha, rfl⟩
-    · refine Or.inr $ eq_top_iff.2 fun a _ => ?_
-      have eq1 : a = ∑ i : ι, Function.update (0 : ι → M) i (a i) := by
-        ext j
-        rw [Finset.sum_apply]
-        simp [Function.update]
-      rw [eq1]
-      refine x.sum_mem fun i _ => ?_
-      have mem : (a i) ∈ (⊤ : Submodule A M) := ⟨⟩
-      rw [← h, mem_span_set] at mem
-      obtain ⟨c, hc1, eq⟩ := mem
-      rw [Finsupp.sum] at eq
-      rw [show Function.update (0  : ι → M) i (a i) =
-        ∑ x ∈ c.support, Function.update (0 : ι → M) i (c x • x) by
-        ext j; simp [Function.update, eq]]
-      refine x.sum_mem fun j hj => ?_
-      specialize hc1 hj
-      simp only [Set.mem_iUnion, Set.mem_singleton_iff, exists_prop] at hc1
-      obtain ⟨f, hf, rfl⟩ := hc1
-      rw [show Function.update (0 : ι → M) i (c (f default) • f default) =
-        (stdBasisMatrix i default (c (f default)) : M[ι, A]) • f  by
-        ext j
-        change _ = ∑ _, _
-        simp only [Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite, stdBasisMatrix,
-          ite_smul, zero_smul]
-        split_ifs with h1
-        · subst h1
-          simp
-        · symm
-          apply Finset.sum_eq_zero
-          intros
-          rw [if_neg]
-          tauto]
-      refine x.smul_mem _ hf
-
-
 @[simp] lemma RingCon.mem_mapMatrix (I : RingCon A) (x) : x ∈ I.mapMatrix ι ↔ ∀ i j, x i j ∈ I :=
   Iff.rfl
 
@@ -614,85 +503,14 @@ theorem Wedderburn_Artin'
   obtain ⟨n, hn, I, inst, e⟩ := Wedderburn_Artin A
   exact ⟨n, hn, (Module.End A I)ᵐᵒᵖ, inferInstance, e⟩
 
--- This is a lemma on purpose, **don't** attempt to look at its definition
-lemma division_ring_exists_unique_isSimpleModule
-    (S : Type u) [DivisionRing S] (N : Type*) [AddCommGroup N] [Module S N] [IsSimpleModule S N] :
-    Nonempty (N ≃ₗ[S] S) := by
-  have inst4 := IsSimpleModule.nontrivial S N
-  have H := Module.Free.of_divisionRing S N
-  rw [Module.free_iff_set] at H
-  obtain ⟨s, ⟨b⟩⟩ := H
-  if hs1 : s = ∅
-  then
-    subst hs1
-    have := b.index_nonempty
-    simp only [nonempty_subtype, Set.mem_empty_iff_false, exists_const] at this
-  else
-    obtain ⟨i, hi⟩ := Set.nonempty_iff_ne_empty.mpr hs1
-    have eq0 := IsSimpleOrder.eq_bot_or_eq_top (Submodule.span S {b ⟨i, hi⟩}) |>.resolve_left (by
-      intro h
-      simp only [Submodule.span_singleton_eq_bot] at h
-      exact b.ne_zero ⟨i, hi⟩ h)
-    have eq : s = {i} := by
-      refine le_antisymm ?_ (by simpa)
-      simp only [Set.le_eq_subset, Set.subset_singleton_iff]
-      intro j hj
-      have mem : b ⟨j, hj⟩ ∈ Submodule.span S {b ⟨i, hi⟩} := eq0 ▸ ⟨⟩
-      rw [Submodule.mem_span_singleton] at mem
-      obtain ⟨r, hr⟩ := mem
-      have hr' := congr(b.repr $hr)
-      simp only [LinearMapClass.map_smul, Basis.repr_self, Finsupp.smul_single, smul_eq_mul,
-        mul_one] at hr'
-      by_contra rid
-      have hr' := congr($hr' ⟨i, hi⟩)
-      rw [Finsupp.single_eq_same, Finsupp.single_eq_of_ne (h := by simpa)] at hr'
-      subst hr'
-      simp only [zero_smul] at hr
-      exact b.ne_zero _ hr.symm |>.elim
-
-    subst eq
-    refine ⟨b.repr ≪≫ₗ LinearEquiv.ofBijective ⟨⟨fun x => x ⟨i, by simp⟩, ?_⟩, ?_⟩ ⟨?_, ?_⟩⟩
-    · intro x y; simp
-    · intro x y; simp
-    · intro x y hxy; ext; simpa using hxy
-    · intro x; exact ⟨Finsupp.single ⟨i, by simp⟩ x, by simp⟩
-
-lemma matrix_division_ring_exists_unique_isSimpleModule
-    (ι : Type*) [Inhabited ι] [Fintype ι] [DecidableEq ι]
-    (S : Type u) [DivisionRing S]
-    (N : Type*) [AddCommGroup N] [Module M[ι, S] N] [IsSimpleModule M[ι, S] N] :
-    Nonempty (N ≃ₗ[M[ι, S]] (ι → S)) := by
-  haveI := IsSimpleModule.matrix_iff S ι N |>.mp inferInstance
-  have := division_ring_exists_unique_isSimpleModule S (α S ι N)
-  sorry
-
-universe u'
-
-lemma Module.compHom_isSimpleModule
-    (A B : Type*) [Ring A] [Ring B] (e : B ≃+* A)
-    (M : Type u) [AddCommGroup M] [Module A M] [IsSimpleModule A M] :
-    @IsSimpleModule B _ M _ (Module.compHom M e.toRingHom) := by
-  sorry
-
-lemma exists_unique_isSimpleModule
-    (A : Type u) [Ring A] [IsArtinianRing A] [simple : IsSimpleOrder (RingCon A)] :
-    ∃ (M : Type u) (_ : AddCommGroup M) (_ : Module A M), IsSimpleModule A M ∧
-      ∀ (N : Type u') (_ : AddCommGroup N) (_ : Module A N) (_ : IsSimpleModule A N),
-        Nonempty (M ≃ₗ[A] N) := by
-  obtain ⟨n, hn, S, inst1, ⟨e⟩⟩ := Wedderburn_Artin' A
-  have : Inhabited (Fin n) := ⟨⟨0, by omega⟩⟩
-  have : IsSimpleModule M[Fin n, S] (Fin n → S) := by
-    rw [IsSimpleModule.matrix_iff']; infer_instance
-  letI : Module A (Fin n → S) := Module.compHom (Fin n → S) e.toRingHom
-  refine ⟨Fin n → S, inferInstance, inferInstance, ?_, ?_⟩
-  · apply Module.compHom_isSimpleModule
-  · intro N inst2 inst3 inst4
-    refine ⟨?_⟩
-    letI : Module M[Fin n, S] N := Module.compHom N e.symm.toRingHom
-    haveI : IsSimpleModule M[Fin n, S] N := Module.compHom_isSimpleModule _ _ _ _
-    have := matrix_division_ring_exists_unique_isSimpleModule (Fin n) S N
-    sorry
-  -- sorry
+theorem Wedderburn_Artin_divisionRing_unique
+    (D E : Type u) [DivisionRing D] [DivisionRing E] (m n : ℕ) (hm : m ≠ 0) (hn : n ≠ 0)
+    (iso : M[Fin m, D] ≃+* M[Fin n, E]) : Nonempty $ D ≃+* E := by
+  classical
+  have i1 : IsMoritaEquivalent D E := @IsMoritaEquivalent.trans _ _ _ _ _ _
+      (@IsMoritaEquivalent.trans _ _ _ _ _ _ (.matrix' D m hm) (.ofIso _ _ iso))
+      (IsMoritaEquivalent.matrix' E n hn).symm
+  exact ⟨i1.ringEquivOfDivisionRing⟩
 
 end simple_ring
 
@@ -844,6 +662,19 @@ lemma Wedderburn_Artin_algebra_version
       by ext : 1; simp [Function.update]]
     rw [← Algebra.commutes, ← smul_eq_mul, ← e.map_smul]
     exact congr_arg e $ by ext; simp
+
+theorem Wedderburn_Artin_divisionRing_unique_algebra_version
+    (D E : Type u) [DivisionRing D] [DivisionRing E] [Algebra K D] [Algebra K E]
+    (m n : ℕ) (hm : m ≠ 0) (hn : n ≠ 0)
+    (iso : M[Fin m, D] ≃ₐ[K] M[Fin n, E]) : Nonempty $ D ≃ₐ[K] E := by
+  classical
+  have i1 : IsMoritaEquivalent D E := @IsMoritaEquivalent.trans _ _ _ _ _ _
+      (@IsMoritaEquivalent.trans _ _ _ _ _ _ (.matrix' D m hm) (.ofIso _ _ iso))
+      (IsMoritaEquivalent.matrix' E n hn).symm
+  have e := i1.ringEquivOfDivisionRing -- in the algebra version, this needs to be strengthened.
+  refine ⟨AlgEquiv.ofRingEquiv (f := e) ?_⟩
+  sorry
+
 
 theorem is_central_of_wdb
     (hctr : Subalgebra.center K B = ⊥)
