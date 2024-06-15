@@ -666,14 +666,149 @@ lemma Wedderburn_Artin_algebra_version
 theorem Wedderburn_Artin_divisionRing_unique_algebra_version
     (D E : Type u) [DivisionRing D] [DivisionRing E] [Algebra K D] [Algebra K E]
     (m n : ℕ) (hm : m ≠ 0) (hn : n ≠ 0)
+    (Wdb : B ≃ₐ[K] M[Fin m, D])
     (iso : M[Fin m, D] ≃ₐ[K] M[Fin n, E]) : Nonempty $ D ≃ₐ[K] E := by
-  classical
-  have i1 : IsMoritaEquivalent D E := @IsMoritaEquivalent.trans _ _ _ _ _ _
-      (@IsMoritaEquivalent.trans _ _ _ _ _ _ (.matrix' D m hm) (.ofIso _ _ iso))
-      (IsMoritaEquivalent.matrix' E n hn).symm
-  have e := i1.ringEquivOfDivisionRing -- in the algebra version, this needs to be strengthened.
-  refine ⟨AlgEquiv.ofRingEquiv (f := e) ?_⟩
+  haveI : Inhabited (Fin m) := ⟨0, by omega⟩
+  haveI : Inhabited (Fin n) := ⟨0, by omega⟩
+
+  haveI : IsSimpleModule D (ModuleCat.of D D) := inferInstanceAs (IsSimpleModule D D)
+  haveI : IsSimpleModule E (ModuleCat.of E E) := inferInstanceAs (IsSimpleModule E E)
+
+  haveI : IsSimpleModule M[Fin m, D] (Fin m → D) :=
+    IsMoritaEquivalent.division_ring.IsSimpleModule.functor
+      D M[Fin m, D] (moritaEquivalentToMatrix D (Fin m)) (.of D D)
+  haveI : IsSimpleModule M[Fin n, E] (Fin n → E) :=
+    IsMoritaEquivalent.division_ring.IsSimpleModule.functor
+      E M[Fin n, E] (moritaEquivalentToMatrix E (Fin n)) (.of E E)
+
+  letI : Algebra K (Module.End M[Fin m, D] (Fin m → D)) :=
+  { smul := fun k f =>
+    { toFun := fun v => f $ k • v
+      map_add' := _
+      map_smul' := _ }
+    toFun := _
+    map_one' := _
+    map_mul' := _
+    map_zero' := _
+    map_add' := _
+    commutes' := _
+    smul_def' := _ }
+
+  let step0 : (Fin m → D) ≃ₐ[K] (Fin n → E) := sorry
+
+  let step1 : Dᵐᵒᵖ ≃ₐ[K] Module.End M[Fin m, D] (Fin m → D) := sorry
+  let step2 : Eᵐᵒᵖ ≃ₐ[K] Module.End M[Fin n, E] (Fin n → E) := sorry
+
+
   sorry
+  -- classical
+  -- have i1 : IsMoritaEquivalent D E := @IsMoritaEquivalent.trans _ _ _ _ _ _
+  --     (@IsMoritaEquivalent.trans _ _ _ _ _ _ (.matrix' D m hm) (.ofIso _ _ iso))
+  --     (IsMoritaEquivalent.matrix' E n hn).symm
+  -- have e := i1.ringEquivOfDivisionRing -- in the algebra version, this needs to be strengthened.
+
+  -- letI : Module D E :=
+  -- { smul := fun x y => e x * y
+  --   one_smul := fun x => show e 1 * x = x by rw [e.map_one, one_mul]
+  --   mul_smul := fun x y z => show e (x * y) * z = e x * (e y * z) by rw [e.map_mul, mul_assoc]
+  --   smul_zero := fun x => show e x * 0 = 0 by rw [mul_zero]
+  --   smul_add := fun x y z => show e x * (y + z) = e x * y + e x * z by rw [mul_add]
+  --   add_smul := fun x y z => show e (x + y) * z = e x * z + e y * z by rw [map_add, add_mul]
+  --   zero_smul := fun x => show e 0 * x = 0 by rw [map_zero, zero_mul] }
+  -- haveI : IsSimpleModule D E := by
+  --   refine ⟨fun p => ?_⟩
+  --   by_cases h : 1 ∈ p
+  --   · right
+  --     rw [eq_top_iff]
+  --     rintro x -
+  --     have mem : e (e.symm x) * 1 ∈ p := p.smul_mem (e.symm x) h
+  --     simpa using mem
+  --   · left
+  --     rw [eq_bot_iff]
+  --     intro x hx
+  --     contrapose! h
+  --     simp only [Submodule.mem_bot] at h
+  --     rw [show (1 : E) = x⁻¹ * x from inv_mul_cancel h |>.symm]
+  --     have mem : e _ * x ∈ p := p.smul_mem (e.symm x⁻¹) hx
+  --     simpa using mem
+
+  -- have H := Module.Free.of_divisionRing D E
+  -- rw [Module.free_iff_set] at H
+  -- obtain ⟨s, ⟨b⟩⟩ := H
+  -- if hs1 : s = ∅
+  -- then
+  --   subst hs1
+  --   have := b.index_nonempty
+  --   simp only [nonempty_subtype, Set.mem_empty_iff_false, exists_const] at this
+  -- else
+  --   obtain ⟨i, hi⟩ := Set.nonempty_iff_ne_empty.mpr hs1
+  --   have eq0 := IsSimpleOrder.eq_bot_or_eq_top (Submodule.span D {b ⟨i, hi⟩}) |>.resolve_left (by
+  --     intro h
+  --     simp only [Submodule.span_singleton_eq_bot] at h
+  --     exact b.ne_zero ⟨i, hi⟩ h)
+  --   have eq : s = {i} := by
+  --     refine le_antisymm ?_ (by simpa)
+  --     simp only [Set.le_eq_subset, Set.subset_singleton_iff]
+  --     intro j hj
+  --     have mem : b ⟨j, hj⟩ ∈ Submodule.span D {b ⟨i, hi⟩} := eq0 ▸ ⟨⟩
+  --     rw [Submodule.mem_span_singleton] at mem
+  --     obtain ⟨r, hr⟩ := mem
+  --     have hr' := congr(b.repr $hr)
+  --     simp only [LinearMapClass.map_smul, Basis.repr_self, Finsupp.smul_single, smul_eq_mul,
+  --       mul_one] at hr'
+  --     by_contra rid
+  --     have hr' := congr($hr' ⟨i, hi⟩)
+  --     rw [Finsupp.single_eq_same, Finsupp.single_eq_of_ne (h := by simpa)] at hr'
+  --     subst hr'
+  --     simp only [zero_smul] at hr
+  --     exact b.ne_zero _ hr.symm |>.elim
+
+  --   subst eq
+  --   have H : FiniteDimensional.finrank D E = 1 := by
+  --     rw [FiniteDimensional.finrank_eq_card_basis b]
+  --     simp only [Fintype.card_ofSubsingleton]
+  --   rw [finrank_eq_one_iff'] at H
+  --   let b' : Basis (Fin 1) D E := Basis.mk (v := ![1])
+  --     (by
+  --       apply LinearIndependent.fin_cons'
+  --       · exact linearIndependent_empty_type
+  --       rintro d ⟨y, hy⟩ (H : e d * 1 + y = 0)
+  --       simp only [range_empty, Submodule.span_empty, Submodule.mem_bot] at hy
+  --       simp only [mul_one, hy, add_zero, AddEquivClass.map_eq_zero_iff] at H
+  --       exact H)
+  --     (by
+  --       intro x _
+  --       simp only [Nat.succ_eq_add_one, Nat.reduceAdd, range_cons, range_empty, Set.union_empty]
+  --       rw [Submodule.mem_span_singleton]
+  --       exact ⟨e.symm x, show e (e.symm x) * 1 = x by simp⟩)
+  --   let ee : E ≃ₗ[D] D := b'.repr ≪≫ₗ
+  --     { toFun := fun x => x 0
+  --       map_add' := fun x y => by simp
+  --       map_smul' := fun x y => by simp
+  --       invFun := fun d => Finsupp.single 0 d
+  --       left_inv := fun x => by ext; simp
+  --       right_inv := fun x => by simp }
+
+  --   refine ⟨⟨ee.symm, ?_, ?_, ?_⟩⟩
+  --   · intro x y
+  --     simp only [Nat.succ_eq_add_one, Nat.reduceAdd, Fin.isValue, LinearEquiv.trans_symm,
+  --       Equiv.toFun_as_coe, EquivLike.coe_coe, LinearEquiv.trans_apply, LinearEquiv.coe_symm_mk,
+  --       Basis.repr_symm_apply, Basis.coe_mk, Finsupp.total_single, cons_val_fin_one, ee, b']
+  --     change e _ * _ = (e _ * _) * (e _ * _)
+  --     simp [e.map_mul]
+
+  --   · intro x y
+  --     simp only [Nat.succ_eq_add_one, Nat.reduceAdd, Fin.isValue, LinearEquiv.trans_symm,
+  --       Equiv.toFun_as_coe, EquivLike.coe_coe, map_add, LinearEquiv.trans_apply,
+  --       LinearEquiv.coe_symm_mk, Basis.repr_symm_apply, Basis.coe_mk, Finsupp.total_single,
+  --       cons_val_fin_one, ee, b']
+  --   · intro k
+  --     simp only [Nat.succ_eq_add_one, Nat.reduceAdd, Fin.isValue, LinearEquiv.trans_symm,
+  --       Equiv.toFun_as_coe, EquivLike.coe_coe, LinearEquiv.trans_apply, LinearEquiv.coe_symm_mk,
+  --       Basis.repr_symm_apply, Basis.coe_mk, Finsupp.total_single, cons_val_fin_one, ee, b']
+  --     change (e _) * 1 = _
+  --     simp only [mul_one]
+  --     sorry
 
 
 theorem is_central_of_wdb

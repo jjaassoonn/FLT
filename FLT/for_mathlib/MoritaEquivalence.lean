@@ -599,7 +599,8 @@ lemma division_ring_exists_unique_isSimpleModule
 instance : e.functor.Additive :=
   Functor.additive_of_preserves_binary_products _
 
-lemma isSimpleModule_iff_injective_or_eq_zero (M : ModuleCat R) :
+lemma isSimpleModule_iff_injective_or_eq_zero
+    (R : Type u) [Ring R] (M : ModuleCat R) :
     IsSimpleModule R M ↔
     (Nontrivial M ∧ ∀ (N : ModuleCat R) (f : M ⟶ N), f = 0 ∨ Function.Injective f) := by
   constructor
@@ -625,7 +626,8 @@ open ZeroObject
 
 variable {R S} in
 instance _root_.CategoryTheory.Equivalence.nontrivial
-    (M : ModuleCat R) [h : Nontrivial M] : Nontrivial (e.functor.obj M) := by
+    {R S : Type u} [Ring R] [Ring S] (e : ModuleCat.{v} R ≌ ModuleCat.{v} S)
+    (M : ModuleCat.{v} R) [h : Nontrivial M] : Nontrivial (e.functor.obj M) := by
   obtain ⟨m, n, h⟩ := h
   by_contra inst1
   rw [not_nontrivial_iff_subsingleton] at inst1
@@ -650,10 +652,11 @@ instance _root_.CategoryTheory.Equivalence.nontrivial
 
 
 lemma IsSimpleModule.functor
-    (M : ModuleCat R) [simple_module : IsSimpleModule R M] : IsSimpleModule S (e.functor.obj M) := by
+    (R S : Type u) [Ring R] [Ring S] (e : ModuleCat.{v} R ≌ ModuleCat.{v} S)
+    (M : ModuleCat.{v} R) [simple_module : IsSimpleModule R M] : IsSimpleModule S (e.functor.obj M) := by
   rw [isSimpleModule_iff_injective_or_eq_zero] at simple_module ⊢
   rcases simple_module with ⟨nontriv, H⟩
-  refine ⟨e.nontrivial M, fun N f => ?_⟩
+  refine ⟨e.nontrivial (h := nontriv), fun N f => ?_⟩
   let F := e.unit.app M ≫ e.inverse.map f
   rcases H _ F with H|H
   · simp only [Functor.id_obj, Functor.comp_obj, Preadditive.IsIso.comp_left_eq_zero, F] at H
