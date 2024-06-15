@@ -664,7 +664,7 @@ lemma Wedderburn_Artin_algebra_version
     exact congr_arg e $ by ext; simp
 
 theorem Wedderburn_Artin_divisionRing_unique_algebra_version
-    (D E : Type u) [DivisionRing D] [DivisionRing E] [Algebra K D] [Algebra K E]
+    (D E : Type*) [DivisionRing D] [DivisionRing E] [Algebra K D] [Algebra K E]
     (m n : ℕ) (hm : m ≠ 0) (hn : n ≠ 0)
     (Wdb : B ≃ₐ[K] M[Fin m, D])
     (iso : M[Fin m, D] ≃ₐ[K] M[Fin n, E]) : Nonempty $ D ≃ₐ[K] E := by
@@ -684,20 +684,20 @@ theorem Wedderburn_Artin_divisionRing_unique_algebra_version
   letI : Algebra K (Module.End M[Fin m, D] (Fin m → D)) :=
   { smul := fun k f =>
     { toFun := fun v => f $ k • v
-      map_add' := _
-      map_smul' := _ }
-    toFun := _
-    map_one' := _
-    map_mul' := _
-    map_zero' := _
-    map_add' := _
-    commutes' := _
-    smul_def' := _ }
+      map_add' := by simp
+      map_smul' := fun m x => by simp; sorry }
+    toFun := sorry
+    map_one' := sorry
+    map_mul' := sorry
+    map_zero' := sorry
+    map_add' := sorry
+    commutes' := sorry
+    smul_def' := sorry }
 
   let step0 : (Fin m → D) ≃ₐ[K] (Fin n → E) := sorry
 
   let step1 : Dᵐᵒᵖ ≃ₐ[K] Module.End M[Fin m, D] (Fin m → D) := sorry
-  let step2 : Eᵐᵒᵖ ≃ₐ[K] Module.End M[Fin n, E] (Fin n → E) := sorry
+  --let step2 : Eᵐᵒᵖ ≃ₐ[K] Module.End M[Fin n, E] (Fin n → E) := sorry
 
 
   sorry
@@ -842,7 +842,7 @@ theorem is_fin_dim_of_wdb
   apply_fun (· ⟨0, by omega⟩ ⟨0, by omega⟩) at hr
   simp only [sum_apply, smul_apply, diagonal_apply_eq] at hr
   exact hr ▸ Submodule.sum_mem _ fun i hi =>
-    Submodule.smul_mem _ _ $ Submodule.subset_span $ by simpa using ⟨i, hi, rfl⟩
+    Submodule.smul_mem _ _ Submodule.subsetspan Submodule.subset_span  by simpa using ⟨i, hi, rfl⟩
 
 lemma bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed
     (K D : Type*) [Field K] [IsAlgClosed K] [DivisionRing D] [alg : Algebra K D]
@@ -857,7 +857,7 @@ theorem simple_eq_matrix_algClosed [IsAlgClosed K] [IsSimpleOrder (RingCon B)] :
   rcases Wedderburn_Artin_algebra_version K B with ⟨n, hn, S, ins1, ins2, ⟨e⟩⟩
   have := is_fin_dim_of_wdb K B n S (by omega) e
 
-  exact ⟨n, hn, ⟨e.trans $ AlgEquiv.mapMatrix $ AlgEquiv.symm $
+  exact ⟨n, hn, ⟨e.trans AlgEquiv.mapMatrix AlgEquiv.mapMatrix  AlgEquiv.symm $
     AlgEquiv.ofBijective (Algebra.ofId _ _) $
       bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed _ _⟩⟩
 
