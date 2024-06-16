@@ -164,9 +164,62 @@ instance mul_one_in (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
 --   [Algebra K C] [Algebra K D] (hAB : A ≃ₐ[K] C) (hCD : B ≃ₐ[K] D):
 --     A ⊗[K] B ⊗[K] C ≃ₐ[K] C ⊗[K] D := by sorry
 
-def matrix_eqv (n m : ℕ): (Matrix (Fin m) (Fin m) K) ⊗[K] (Matrix (Fin n) (Fin n) K) ≃ₐ[K]
-   Matrix (Fin n∗m)(Fin n*m) (Fin  n*m) K := by sorry
+noncomputable section
+open MatrixEquivTensor
+open TensorProduct
 
+def tensorproduct1 (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
+      (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K] 
+      (A ⊗[K] (Matrix (Fin n) (Fin n) K)) ⊗[K] (B ⊗[K] (Matrix (Fin m) (Fin m) K)) := 
+      Algebra.TensorProduct.congr (matrixEquivTensor _ _ _) (matrixEquivTensor _ _ _)
+
+def tensorproduct2 (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
+      (A ⊗[K] (Matrix (Fin n) (Fin n) K)) ⊗[K] (B ⊗[K] (Matrix (Fin m) (Fin m) K)) ≃ₐ[K] 
+      (A ⊗[K] B) ⊗[K] (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) := 
+      {
+         TensorProduct.tensorTensorTensorComm K A 
+            (Matrix (Fin n) (Fin n) K) B (Matrix (Fin m) (Fin m) K) with
+         map_mul' := by 
+            intros x y
+            sorry
+         commutes' := by aesop
+      }
+   
+-- def tensorproduct2' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
+--       (A ⊗[K] (Matrix (Fin n) (Fin n) K)) ⊗[K] (B ⊗[K] (Matrix (Fin m) (Fin m) K)) ≃ₐ[K] 
+--       (A ⊗[K] B) ⊗[K] (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) := 
+--       AlgEquiv.trans (AlgEquiv.trans (Algebra.TensorProduct.assoc K (A ⊗[K] (Matrix (Fin n) (Fin n) K)) B (Matrix (Fin m) (Fin m) K)).symm
+--       (Algebra.TensorProduct.congr (Algebra.TensorProduct.rightComm K K A B (Matrix (Fin n) (Fin n) K)).symm (1 : (Matrix (Fin m) (Fin m) K) ≃ₐ[K] (Matrix (Fin m) (Fin m) K)))) 
+--       Algebra.TensorProduct.assoc K _ _ (A ⊗[K] B) (Matrix (Fin n) (Fin n) K) (Matrix (Fin m) (Fin m) K)
+
+-- def tensorproduct2'' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
+--       (A ⊗[K] (Matrix (Fin n) (Fin n) K)) ⊗[K] (B ⊗[K] (Matrix (Fin m) (Fin m) K)) ≃ₐ[K] 
+--       (A ⊗[K] B) ⊗[K] (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) := 
+--       {
+--          AlgEquiv.trans (Algebra.TensorProduct.assoc _ _ _ _)
+--          Algebra.TensorProduct.congr (AlgEquiv.trans
+--          (AlgEquiv.trans (Algebra.TensorProduct.assoc _ _ _ _).symm
+--          Algebra.TensorProduct.congr (1 : _ ≃ₐ _) (Algebra.TensorProduct.comm _ _ _)
+--          (Algebra.TensorProduct.assoc _ _ _ _))
+--          (Algebra.TensorProduct.assoc _ _ _ _).symm) (1 : _ ≃ₐ _) with
+--       }
+
+def kroneckerMatrixTensor (n m : ℕ) : (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K] 
+      Matrix (Fin (n*m)) (Fin (n*m)) K := 
+      sorry
+
+def tensorproduct3 (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
+      (A ⊗[K] B) ⊗[K] (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K] 
+      (A ⊗[K] B) ⊗[K] (Matrix (Fin (n*m)) (Fin (n*m)) K) := 
+      Algebra.TensorProduct.congr (1 : (A ⊗[K] B) ≃ₐ[K] (A ⊗[K] B)) (kroneckerMatrixTensor K n m)
+
+def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
+    (n m : ℕ) :
+      (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K] 
+      (Matrix (Fin (n*m)) (Fin (n*m)) (A ⊗[K] B)) := 
+      AlgEquiv.trans (AlgEquiv.trans (AlgEquiv.trans (tensorproduct1 K A B n m) 
+      (tensorproduct2 K A B n m)) (tensorproduct3 K A B n m)) 
+      (matrixEquivTensor K (A⊗[K]B) (Fin (n*m))).symm
 
 lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     IsBrauerEquivalent A (one_mul_in n hn A) := by
