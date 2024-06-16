@@ -207,6 +207,10 @@ lemma mul_one (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     exact (matrixEquivTensor K D (Fin (n * m))).symm
   exact ⟨m, (n*m), hm, Nat.mul_ne_zero hn hm, D, hD1, hD2, D, hD1, hD2, e, hA, AlgEquiv.refl⟩
 
+lemma mul_assoc (A B C : CSA K) : 
+    IsBrauerEquivalent (@mul K _ (@mul K _ A B) C) (@mul K _ A (@mul K _ B C)) := 
+  iso_to_eqv (K := K) _ _ $ Algebra.TensorProduct.assoc _ _ _ _
+
 -- This lemma keeps making funny mistakes
 --lemma mul_inv (A : CSA K) : IsBrauerEquivalent one_in' (@mul K _ A (inv A)) := by sorry
 
