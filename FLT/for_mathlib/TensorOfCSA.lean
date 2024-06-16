@@ -5,7 +5,7 @@ universe u v w
 variable (K : Type u) [Field K]
 variable (A B : Type v)[Ring A][Ring B][Algebra K A][Algebra K B]
 
-open scoped TensorProduct
+open scoped TensorProduct BigOperators
 theorem tensor_CSA_is_CSA [Small.{v, u} K ](hA: IsCentralSimple K A) (hB: IsCentralSimple K B):
     IsCentralSimple K (A ⊗[K] B) where
    is_central := IsCentralSimple.TensorProduct.isCentral K A B hA.is_central hB.is_central
@@ -119,7 +119,6 @@ lemma iso_to_eqv (A B : CSA K) (h : A ≃ₐ[K] B) : IsBrauerEquivalent A B := b
   obtain ⟨iso⟩ := this
   exact ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e, e', iso⟩
 
-  --exact ⟨n, m, hn, hm, D, inst1, inst2, e, e'⟩
 
 instance mul (A B : CSA K) : CSA K where
   carrier := A ⊗[K] B
@@ -127,7 +126,8 @@ instance mul (A B : CSA K) : CSA K where
   fin_dim := Module.Finite.tensorProduct K A B
 
 instance (A : Type) [Ring A] [Algebra K A] [FiniteDimensional K A] :
-      FiniteDimensional K Aᵐᵒᵖ := sorry
+    FiniteDimensional K Aᵐᵒᵖ := by 
+  sorry
 
 instance inv(A : CSA K) : CSA K where
   carrier := Aᵐᵒᵖ
@@ -164,9 +164,56 @@ instance mul_one_in (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
 --   [Algebra K C] [Algebra K D] (hAB : A ≃ₐ[K] C) (hCD : B ≃ₐ[K] D):
 --     A ⊗[K] B ⊗[K] C ≃ₐ[K] C ⊗[K] D := by sorry
 
-noncomputable section
-open MatrixEquivTensor
-open TensorProduct
+
+lemma choose_span_of_Tensor (A B : Type*) [Ring A] [Algebra K A] [Ring B] [Algebra K B]
+    (x : A ⊗[K] B): ∃(I : Finset (A ⊗[K] B)) (x1 : (A ⊗[K] B) → A) (x2 : (A ⊗[K] B) → B),
+    x = ∑ i in I, x1 i ⊗ₜ[K] x2 i := by 
+  have mem1 : x ∈ (⊤ : Submodule K (A ⊗[K] B)) := ⟨⟩
+  rw [← TensorProduct.span_tmul_eq_top, mem_span_set] at mem1 
+  obtain ⟨r, hr, (eq1 : ∑ i in r.support, (_ • _) = _)⟩ := mem1 
+  choose a a' haa' using hr 
+  replace eq1 := calc _
+    x = ∑ i in r.support, r i • i := eq1.symm
+    _ = ∑ i in r.support.attach, (r i : K) • i.1 := Finset.sum_attach _ _ |>.symm
+    _ = ∑ i in r.support.attach, (r i • a i.2 ⊗ₜ a' i.2) :=
+        Finset.sum_congr rfl fun i _ ↦ congr(r i.1 • $(haa' i.2)).symm
+    _ = ∑ i in r.support.attach, ((r i • a i.2) ⊗ₜ a' i.2) :=
+        Finset.sum_congr rfl fun i _ ↦ TensorProduct.smul_tmul' _ _ _ 
+  refine ⟨r.support, fun i ↦ if h : i ∈ r.support then r i • a h else 0,
+    fun i ↦ if h : i ∈ r.support then a' h else 0, eq1 ▸ ?_⟩
+  conv_rhs => rw [← Finset.sum_attach]
+  exact Finset.sum_congr rfl fun _ _ ↦ (by aesop)
+
+def tensor_to_kronecker (n m : ℕ) :
+    (Matrix (Fin n) (Fin n) K ⊗[K] Matrix (Fin m) (Fin m) K) →ₐ[K] 
+    Matrix (Fin $ n*m) (Fin $ n*m) K where
+  toFun x := by 
+    choose I x1 x2 hx using choose_span_of_Tensor (Matrix (Fin n) (Fin n) K) (Matrix (Fin m) (Fin m) K) x
+    have : Fin n × Fin m ≃ Fin (n*m) := finProdFinEquiv
+    -- idea is use ∑ i in I, Matrix.kronecker (x1 i) (x2 i) but obviously 
+    -- lean does not undersstand MnmK and M (Fin n × Fin m) K are the same thing.
+    sorry
+  map_one' := sorry
+  map_mul' := sorry
+  map_zero' := sorry
+  map_add' := sorry
+  commutes' := sorry
+    
+def matrix_eqv (n m : ℕ): (Matrix (Fin m) (Fin m) K) ⊗[K] (Matrix (Fin n) (Fin n) K) ≃ₐ[K]
+    Matrix (Fin $ n*m) (Fin $ n*m) K where
+  toFun := by
+    intro x
+    --obtain ⟨⟩ := choose_span_of_Tensor (Matrix (Fin m) (Fin m) K) (Matrix (Fin n) (Fin n) K) x
+    choose I x1 x2 hx using 
+      choose_span_of_Tensor (Matrix (Fin m) (Fin m) K) (Matrix (Fin n) (Fin n) K) x
+    
+    sorry--Matrix.kronecker
+  invFun := sorry
+  left_inv := sorry
+  right_inv := sorry
+  map_mul' := sorry
+  map_add' := sorry
+  commutes' := sorry
 
 def tensorproduct1 (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
       (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K] 
@@ -211,14 +258,14 @@ def kroneckerMatrixTensor (n m : ℕ) : (Matrix (Fin n) (Fin n) K) ⊗[K] (Matri
 def tensorproduct3 (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B] (n m : ℕ):
       (A ⊗[K] B) ⊗[K] (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K] 
       (A ⊗[K] B) ⊗[K] (Matrix (Fin (n*m)) (Fin (n*m)) K) := 
-      Algebra.TensorProduct.congr (1 : (A ⊗[K] B) ≃ₐ[K] (A ⊗[K] B)) (kroneckerMatrixTensor K n m)
+      Algebra.TensorProduct.congr (1 : (A ⊗[K] B) ≃ₐ[K] (A ⊗[K] B)) (kroneckerMatrixTensor n m)
 
-def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
+def kroneckerMatrixTensor' (A B: Type v) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
     (n m : ℕ) :
       (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K] 
       (Matrix (Fin (n*m)) (Fin (n*m)) (A ⊗[K] B)) := 
-      AlgEquiv.trans (AlgEquiv.trans (AlgEquiv.trans (tensorproduct1 K A B n m) 
-      (tensorproduct2 K A B n m)) (tensorproduct3 K A B n m)) 
+      AlgEquiv.trans (AlgEquiv.trans (AlgEquiv.trans (tensorproduct1 A B n m) 
+      (tensorproduct2 A B n m)) (tensorproduct3 A B n m)) 
       (matrixEquivTensor K (A⊗[K]B) (Fin (n*m))).symm
 
 lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
@@ -261,9 +308,13 @@ lemma mul_one (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
   exact ⟨m, (n*m), hm, Nat.mul_ne_zero hn hm, D, hD1, hD2, D, hD1, hD2, e, hA, AlgEquiv.refl⟩
 
 lemma mul_assoc (A B C : CSA K) : 
-    IsBrauerEquivalent (@mul K _ (@mul K _ A B) C) (@mul K _ A (@mul K _ B C)) := 
+    IsBrauerEquivalent (mul (mul A B) C) (mul A (mul B C)) := 
   iso_to_eqv (K := K) _ _ $ Algebra.TensorProduct.assoc _ _ _ _
 
+--lemma mul_inv (A : CSA K) : IsBrauerEquivalent (mul A (inv (K := K) A)) one_in' := by sorry
+
+
+-- #check IsBrauerEquivalent mul(K:=K)A(inv(K:=K)A) mul (K := K) A (inv (K := K) A)  one_in'
 -- This lemma keeps making funny mistakes
 --lemma mul_inv (A : CSA K) : IsBrauerEquivalent one_in' (@mul K _ A (inv A)) := by sorry
 
