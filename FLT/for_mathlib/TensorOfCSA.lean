@@ -89,12 +89,30 @@ def refl (A : CSA K) : IsBrauerEquivalent A A := by
    obtain ⟨n, hn, D, inst1, inst2, ⟨e⟩⟩ := Wedderburn_Artin_algebra_version K A
    refine ⟨n, n, hn, hn, D, inst1, inst2, D, inst1, inst2, e, e, AlgEquiv.refl⟩
 
+def hummmmmm (A : CSA K)(indexLeft indexRight : ℕ)
+(indexLeft_ne_zero : indexLeft ≠ 0)
+(indexRight_ne_zero : indexRight ≠ 0)
+(D : Type v) (div : DivisionRing D) (alg : Algebra K D)
+(D' : Type v) (div' : DivisionRing D') (alg' : Algebra K D')
+(isoLeft : A ≃ₐ[K] Matrix (Fin indexLeft) (Fin indexLeft) D)
+(isoRight : A ≃ₐ[K] Matrix (Fin indexRight) (Fin indexRight) D'): D ≃ₐ[K] D' := by
+   have h1: Matrix (Fin indexLeft) (Fin indexLeft) D ≃ₐ[K] Matrix (Fin indexRight) (Fin indexRight) D' := by
+      exact (id isoLeft.symm).trans isoRight
+   sorry
+
 def symm {A B : CSA K} (h : IsBrauerEquivalent A B) : IsBrauerEquivalent B A := by
    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, e⟩ := h
    exact ⟨m, n, hm, hn, D', inst1', inst2', D, inst1, inst2, e2, e1, e.symm⟩
 
 def trans {A B C : CSA K} (hAB : IsBrauerEquivalent A B) (hBC : IsBrauerEquivalent B C) :
-      IsBrauerEquivalent A C := sorry
+      IsBrauerEquivalent A C := by 
+      obtain ⟨n1A, m1B, hn1A, hm1B, D1, inst1, inst2, D'1, inst1', inst2', e1A, e2B, eAB⟩ := hAB
+      obtain ⟨n2B, m2C, hn2B, hm2C, D2, inst12, inst22, D'2, inst1'2, inst2'2, e1B, e2C, eBC⟩ := hBC
+      have : D'1 ≃ₐ[K] D2 := by 
+         exact hummmmmm B m1B n2B hm1B hn2B D'1 inst1' inst2' D2 inst12 inst22 e2B e1B
+      have : D1 ≃ₐ[K] D2 := by exact AlgEquiv.trans (R:= K) (A₁ := D1) (A₂ := D'1) (A₃ := D2) eAB this
+      have : D1 ≃ₐ[K] D'2 := by exact AlgEquiv.trans (R:= K) (A₁ := D1) (A₂ := D2) (A₃ := D'2) this eBC
+      exact ⟨n1A, m2C, hn1A, hm2C, D1, inst1, inst2, D'2, inst1'2, inst2'2, e1A, e2C, this⟩
 
 theorem Braur_is_eqv : Equivalence (IsBrauerEquivalent (K := K)) where
   refl := refl
