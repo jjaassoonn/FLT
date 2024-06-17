@@ -762,7 +762,7 @@ theorem is_fin_dim_of_wdb
   apply_fun (· ⟨0, by omega⟩ ⟨0, by omega⟩) at hr
   simp only [sum_apply, smul_apply, diagonal_apply_eq] at hr
   exact hr ▸ Submodule.sum_mem _ fun i hi =>
-    Submodule.smul_mem _ _ Submodule.subsetspan Submodule.subset_span  by simpa using ⟨i, hi, rfl⟩
+    Submodule.smul_mem _ _ $ Submodule.subset_span $ by simpa using ⟨i, hi, rfl⟩
 
 lemma bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed
     (K D : Type*) [Field K] [IsAlgClosed K] [DivisionRing D] [alg : Algebra K D]
@@ -777,7 +777,7 @@ theorem simple_eq_matrix_algClosed [IsAlgClosed K] [IsSimpleOrder (RingCon B)] :
   rcases Wedderburn_Artin_algebra_version K B with ⟨n, hn, S, ins1, ins2, ⟨e⟩⟩
   have := is_fin_dim_of_wdb K B n S (by omega) e
 
-  exact ⟨n, hn, ⟨e.trans AlgEquiv.mapMatrix AlgEquiv.mapMatrix  AlgEquiv.symm $
+  exact ⟨n, hn, ⟨e.trans $ AlgEquiv.mapMatrix $ AlgEquiv.symm $
     AlgEquiv.ofBijective (Algebra.ofId _ _) $
       bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed _ _⟩⟩
 
