@@ -131,7 +131,8 @@ instance mul (A B : CSA K) : CSA K where
 
 instance (A : Type) [Ring A] [Algebra K A] [FiniteDimensional K A] :
     FiniteDimensional K Aᵐᵒᵖ := by
-  sorry
+        have f:= MulOpposite.opLinearEquiv K (M:= A)
+        exact Module.Finite.of_surjective (R:= K) (M:= A) (N:= Aᵐᵒᵖ) f (LinearEquiv.surjective _)
 
 instance inv(A : CSA K) : CSA K where
   carrier := Aᵐᵒᵖ
