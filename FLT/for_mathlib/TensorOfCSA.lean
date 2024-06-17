@@ -127,7 +127,8 @@ instance mul (A B : CSA K) : CSA K where
 
 instance (A : Type) [Ring A] [Algebra K A] [FiniteDimensional K A] :
     FiniteDimensional K Aᵐᵒᵖ := by 
-  sorry
+      have f:= MulOpposite.opLinearEquiv K (M:= A)
+      exact Module.Finite.of_surjective (R:= K) (M:= A) (N:= Aᵐᵒᵖ) f (LinearEquiv.surjective _)
 
 instance inv(A : CSA K) : CSA K where
   carrier := Aᵐᵒᵖ
@@ -186,7 +187,7 @@ lemma choose_span_of_Tensor (A B : Type*) [Ring A] [Algebra K A] [Ring B] [Algeb
 
 def tensor_to_kronecker (n m : ℕ) :
     (Matrix (Fin n) (Fin n) K ⊗[K] Matrix (Fin m) (Fin m) K) →ₐ[K] 
-    Matrix (Fin $ n*m) (Fin $ n*m) K where
+    Matrix (Fin n∗m)(Fin n*m) (Fin  n*m) K where
   toFun x := by 
     choose I x1 x2 hx using choose_span_of_Tensor (Matrix (Fin n) (Fin n) K) (Matrix (Fin m) (Fin m) K) x
     have : Fin n × Fin m ≃ Fin (n*m) := finProdFinEquiv
@@ -200,7 +201,7 @@ def tensor_to_kronecker (n m : ℕ) :
   commutes' := sorry
     
 def matrix_eqv (n m : ℕ): (Matrix (Fin m) (Fin m) K) ⊗[K] (Matrix (Fin n) (Fin n) K) ≃ₐ[K]
-    Matrix (Fin $ n*m) (Fin $ n*m) K where
+    Matrix (Fin n∗m)(Fin n*m) (Fin  n*m) K where
   toFun := by
     intro x
     --obtain ⟨⟩ := choose_span_of_Tensor (Matrix (Fin m) (Fin m) K) (Matrix (Fin n) (Fin n) K) x
