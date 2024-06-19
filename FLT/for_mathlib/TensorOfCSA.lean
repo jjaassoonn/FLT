@@ -126,6 +126,21 @@ namespace BrauerGroup
 
 open scoped Classical
 
+def matrix_comp (n m : ℕ) (A : Type*) [Ring A] [Algebra K A]: 
+    Matrix (Fin n) (Fin n) $ Matrix (Fin m) (Fin m) A ≃ₐ[K] Matrix (Fin $ n*m) (Fin $ n*m) A := by 
+  sorry
+
+theorem eqv_iff (A B : CSA K): IsBrauerEquivalent A B ↔ ∃(n m : ℕ), 
+    Nonempty $ Matrix (Fin n) (Fin n) A ≃ₐ[K] Matrix (Fin m) (Fin m) B := by
+  constructor
+  · intro hAB 
+    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso⟩ := hAB 
+
+    sorry
+  · sorry
+
+
+
 def CSA_Setoid : Setoid (CSA K) where
   r := IsBrauerEquivalent
   iseqv := IsBrauerEquivalent.Braur_is_eqv
@@ -294,7 +309,7 @@ def huarongdao (A B C D : Type*) [Ring A] [Ring B] [Ring C] [Ring D] [Algebra K 
     $ Algebra.TensorProduct.comm K (A ⊗[K] C) D
   let eq5 := Algebra.TensorProduct.assoc K B D (A ⊗[K] C)|>.symm
   let eq6 := Algebra.TensorProduct.comm K (B ⊗[K] D) (A ⊗[K] C)
-  exact eq1.trans $ eq2.trans $ eq3.trans $ eq4.trans $ eq5.trans eq6
+  exact eq1.trans eq2.trans eq2.trans  eq3.trans eq4.trans eq4.trans  eq5.trans eq6
 
 def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
     (n m : ℕ) :
@@ -333,8 +348,6 @@ instance Mul: Mul $ BrGroup (K := K) :=
     intro A B C D hAB hCD
     change IsBrauerEquivalent _ _ at *
     exact eqv_tensor_eqv A C B D hAB hCD)⟩ 
-
-
 
 theorem mul_assoc' (A B C : BrGroup (K := K)) : A * B * C = A * (B * C) := by
   sorry
