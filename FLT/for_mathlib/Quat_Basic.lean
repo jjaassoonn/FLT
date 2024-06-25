@@ -5,7 +5,7 @@ suppress_compilation
 
 namespace Quat 
 
-variable (a b : ℚ)
+variable (a b : ℚ) (ha : a ≠ 0) (hb : b ≠ 0)
 
 open Quaternion Classical Matrix
 
@@ -74,6 +74,49 @@ theorem non_zero_norm_iff_div :
 --       inv_zero := by simp only [map_zero, inv_zero, star_zero, smul_zero]
 --       nnqsmul := _
 --       qsmul := _
+
+--- !!Might be wrong don't try to write this
+def equiv_mul_square (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0): 
+    ℍ[ℚ, a, b] ≃ₐ[ℚ] ℍ[ℚ, u^2 * a, v^2 * b] where
+  toFun x := ⟨x.1, u * x.2, v * x.3, u * v * x.4⟩
+  invFun x := ⟨x.1, u⁻¹ * x.2, v⁻¹ * x.3, u⁻¹ * v⁻¹ * x.4⟩
+  left_inv x := by ext <;> field_simp
+  right_inv x := by ext <;> field_simp
+  map_mul' x y := by ext <;> simp <;> sorry
+  map_add' x y := by 
+    ext <;> simp only [QuaternionAlgebra.add_re, QuaternionAlgebra.add_imI, 
+      QuaternionAlgebra.add_imJ, QuaternionAlgebra.add_imK, QuaternionAlgebra.mk_add_mk]
+    <;> ring
+  commutes' x := by ext <;> simp 
+
+def one_iso_matrix : ℍ[ℚ, 1, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ where
+  toFun x := x.1 • 1 + x.2 • (1 - stdBasisMatrix 2 2 2) + 
+    x.3 • (stdBasisMatrix 1 2 b + stdBasisMatrix 2 1 1) + 
+    x.4 • (stdBasisMatrix 1 2 b - stdBasisMatrix 2 1 1)
+  invFun M := ⟨(M 1 1 + M 2 2)/2, (M 1 1 - M 2 2)/2, ((M 1 2)/b + M 2 1)/2, ((M 1 2)/b - M 2 1)/2⟩ 
+  left_inv x := by 
+    simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, add_apply,
+      smul_apply, one_apply_eq, sub_apply, Fin.reduceEq, and_self, not_false_eq_true,
+      StdBasisMatrix.apply_of_ne, sub_zero, and_false, and_true, add_zero, sub_self, mul_zero,
+      StdBasisMatrix.apply_same, add_sub_add_left_eq_sub, ne_eq, one_apply_ne, zero_add, zero_sub,
+      mul_neg]; ext <;> ring_nf
+    · nth_rw 1 [mul_assoc x.imJ, mul_inv_cancel hb, mul_one, ← mul_add]; norm_num 
+      rw [mul_comm b, mul_assoc x.imK, mul_inv_cancel hb, mul_one]; ring
+    · rw [mul_assoc x.imJ, mul_inv_cancel hb, mul_one, ← mul_add]; norm_num
+      rw [mul_comm b, mul_assoc x.imK, mul_inv_cancel hb, mul_one]; ring
+  right_inv := sorry
+  map_mul' x y := by 
+    simp only [QuaternionAlgebra.mul_re, one_mul, QuaternionAlgebra.mul_imI, Fin.isValue,
+      QuaternionAlgebra.mul_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
+      QuaternionAlgebra.mul_imK]; ext i j;
+    sorry
+
+  map_add' := sorry
+  commutes' q := by 
+    simp only [QuaternionAlgebra.coe_algebraMap, QuaternionAlgebra.coe_re,
+      QuaternionAlgebra.coe_imI, Fin.isValue, zero_smul, add_zero, QuaternionAlgebra.coe_imJ,
+      smul_add, QuaternionAlgebra.coe_imK]
+    exact Algebra.algebraMap_eq_smul_one q|>.symm
 
 lemma iso_to_not_div : Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ) → 
     ∃(x : ℍ[ℚ, a, b]), x ≠ 0 ∧ (∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1)) := by 
