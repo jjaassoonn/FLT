@@ -76,10 +76,15 @@ theorem non_zero_norm_iff_div :
 --       qsmul := _
 
 lemma iso_to_not_div : Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ) → 
-    ∃(x : ℍ[ℚ, a, b]), ∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1) := by 
+    ∃(x : ℍ[ℚ, a, b]), x ≠ 0 ∧ (∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1)) := by 
   intro ⟨hH⟩ 
   let x := hH.invFun $ stdBasisMatrix 1 1 1
-  use x ; by_contra! hx ; obtain ⟨y, hy1, hy2⟩ := hx
+  use x ; by_contra! hx ;
+  have : x ≠ 0 := by 
+    suffices stdBasisMatrix 1 1 1 ≠ 0 by sorry 
+    intro h; rw [← Matrix.ext_iff] at h; specialize h 1 1
+    simp only [StdBasisMatrix.apply_same, zero_apply, one_ne_zero] at h
+  obtain ⟨y, hy1, hy2⟩ := hx this
   have : y = hH.invFun (hH.toFun y) := by simp [x]
   simp only [x] at hy1; rw [this] at hy1
   apply_fun hH at hy1
@@ -87,13 +92,40 @@ lemma iso_to_not_div : Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 
     AlgEquiv.symm_toEquiv_eq_symm, AlgEquiv.symm_apply_apply, Fin.isValue, _root_.map_mul,
     AlgEquiv.apply_symm_apply, _root_.map_one] at hy1
   suffices ∀(M : Matrix (Fin 2) (Fin 2) ℚ), M * stdBasisMatrix 1 1 1 ≠ 1 by tauto
-  intro M 
-  by_contra! hM 
-  rw [← Matrix.ext_iff] at hM
-  specialize hM 2 2 
+  intro M ; by_contra! hM 
+  rw [← Matrix.ext_iff] at hM; specialize hM 2 2 
   simp only [Fin.isValue, ne_eq, Fin.reduceEq, not_false_eq_true,
     StdBasisMatrix.mul_right_apply_of_ne, one_apply_eq, zero_ne_one] at hM
 
+lemma not_div_to_norm_zero : 
+    (∃(x : ℍ[ℚ, a, b]), x ≠ 0 ∧ (∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1))) → 
+    (∃(x : ℍ[ℚ, a, b]), (x ≠ 0) ∧  (normQuat a b) x = 0) := by 
+  intro ⟨x, ⟨hx, hy⟩⟩ 
+  by_contra! hx'
+  have iff_1 : ∀ (x : ℍ[ℚ, a, b]), (normQuat a b) x = 0 ↔ x = 0 := by 
+    intro x; constructor
+    · by_contra!; exact (hx' x this.2) this.1
+    · intro hxx; simp only [hxx, map_zero]
+  obtain ⟨y, hy1, hy2⟩ := non_zero_norm_iff_div a b |>.2 iff_1 x hx 
+  specialize hy y ; tauto
 
+local notation "ℚ(√"a")" => Algebra.adjoin ℚ {√a}
+
+-- Prop 1.1.7 3 -> 4
+lemma norm_zero_to_norm_in :
+    (∃(x : ℍ[ℚ, a, b]), (x ≠ 0) ∧  (normQuat a b) x = 0) → 
+    (∃(y : ℚ(√a)), b = Algebra.norm ℚ y) := by sorry
+
+-- Prop 1.1.7 4 -> 1
+lemma norm_in_to_iso_matrix :
+    (∃(y : ℚ(√a)), b = Algebra.norm ℚ y) → 
+    Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ) := by sorry
+
+theorem not_div_iff_iso_matrix :
+    Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ) ↔
+    ∃(x : ℍ[ℚ, a, b]), x ≠ 0 ∧ (∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1)) := by
+  constructor
+  · exact iso_to_not_div a b
+  · sorry
 
 end Quat
