@@ -124,7 +124,12 @@ lemma iso_to_not_div : Nonempty (ℍ[ℚ, a, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 
   let x := hH.invFun $ stdBasisMatrix 1 1 1
   use x ; by_contra! hx ;
   have : x ≠ 0 := by 
-    suffices stdBasisMatrix 1 1 1 ≠ 0 by sorry 
+    suffices stdBasisMatrix 1 1 1 ≠ 0 by 
+      by_contra! hhx; 
+      have hHx : hH x = stdBasisMatrix 1 1 1 := by 
+        simp only [Equiv.invFun_as_coe, AlgEquiv.toEquiv_eq_coe, AlgEquiv.symm_toEquiv_eq_symm, 
+          Fin.isValue, EquivLike.coe_coe, AlgEquiv.apply_symm_apply, x]
+      apply_fun hH at hhx; rw [hHx,map_zero] at hhx; tauto 
     intro h; rw [← Matrix.ext_iff] at h; specialize h 1 1
     simp only [StdBasisMatrix.apply_same, zero_apply, one_ne_zero] at h
   obtain ⟨y, hy1, hy2⟩ := hx this
