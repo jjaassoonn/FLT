@@ -174,6 +174,7 @@ theorem not_div_iff_iso_matrix :
     ∃(x : ℍ[ℚ, a, b]), x ≠ 0 ∧ (∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1)) := by
   constructor
   · exact iso_to_not_div a b
-  · sorry
+  · intro not_div
+    exact norm_in_to_iso_matrix a b normzerotonorminab norm_zero_to_norm_in a b  not_div_to_norm_zero a b not_div
 
 end Quat
