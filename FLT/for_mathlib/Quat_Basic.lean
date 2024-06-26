@@ -215,18 +215,58 @@ lemma not_div_to_norm_zero :
 
 local notation "ℚ(√"a")" => Algebra.adjoin ℚ {√a}
 
+def square_a_iso_to_Q (ha : ∃(y : ℚ), a = y ^ 2) : 
+    ℍ[ℚ, a, b] ≃ₐ[ℚ] ℚ := sorry
+
 -- Prop 1.1.7 3 -> 4
 lemma norm_zero_to_norm_in :
     (∃(x : ℍ[ℚ, a, b]), (x ≠ 0) ∧  (normQuat a b) x = 0) → 
     (∃(y : ℚ(√a)), b = Algebra.norm ℚ y) := by
   if ha : ∃(y : ℚ), a = y ^ 2 then
     intro ⟨x, hx⟩
-    obtain ⟨y, hy⟩ := ha; sorry
+    have e1 := square_a_iso_to_Q a b ha  
+    have pp1: (normQuat a b) x = 0 → ∀(y : ℍ[ℚ, a, b]), (y * x ≠ 1 ∨ x * y ≠ 1) := by 
+      intro h; by_contra! 
+      have ne2 := invertible_iff a b x |>.1 $ Set.inter_nonempty_iff_exists_right.mp this
+      exact ne2 h
+    have con1 : ∃(y : ℍ[ℚ, a, b]), y * x = 1 ∧ x * y = 1 := by 
+      have ex : x = e1.invFun (e1 x) := by simp
+      refine ⟨e1.invFun ((e1 x)⁻¹), ?_, ?_⟩
+      · nth_rw 2 [ex]; apply_fun e1 
+        simp only [AlgEquiv.toEquiv_eq_coe, Equiv.invFun_as_coe, AlgEquiv.symm_toEquiv_eq_symm,
+          EquivLike.coe_coe, AlgEquiv.symm_apply_apply, _root_.map_mul, AlgEquiv.apply_symm_apply,
+          _root_.map_one]; refine Rat.inv_mul_cancel _ ?_
+        suffices x ≠ 0 by 
+          by_contra! hx1 
+          apply_fun e1.invFun at hx1 
+          simp only [AlgEquiv.toEquiv_eq_coe, Equiv.invFun_as_coe, AlgEquiv.symm_toEquiv_eq_symm,
+            EquivLike.coe_coe, AlgEquiv.symm_apply_apply, map_zero] at hx1; exact this hx1
+        exact hx.1
+      · rw [ex]; apply_fun e1 
+        simp only [AlgEquiv.toEquiv_eq_coe, Equiv.invFun_as_coe, AlgEquiv.symm_toEquiv_eq_symm,
+          EquivLike.coe_coe, AlgEquiv.symm_apply_apply, _root_.map_mul, AlgEquiv.apply_symm_apply,
+          _root_.map_one]; refine Rat.mul_inv_cancel _ ?_
+        suffices x ≠ 0 by 
+          by_contra! hx1 
+          apply_fun e1.invFun at hx1 
+          simp only [AlgEquiv.toEquiv_eq_coe, Equiv.invFun_as_coe, AlgEquiv.symm_toEquiv_eq_symm,
+            EquivLike.coe_coe, AlgEquiv.symm_apply_apply, map_zero] at hx1; exact this hx1
+        exact hx.1
+    obtain ⟨y, ⟨hy1, hy2⟩⟩ := con1 ; haveI:= pp1 hx.2 y ; tauto
   else 
   intro ⟨x, ⟨hx, hnx⟩⟩
   simp only [normQuat, QuaternionAlgebra.mul_re, QuaternionAlgebra.re_star,
     QuaternionAlgebra.imI_star, mul_neg, QuaternionAlgebra.imJ_star, QuaternionAlgebra.imK_star,
     sub_neg_eq_add, MonoidWithZeroHom.coe_mk, ZeroHom.coe_mk] at hnx
+  have eq1 : x.re * x.re + -(a * x.imI * x.imI) = b * (x.imJ * x.imJ - a * x.imK * x.imK) := by
+    apply_fun fun y ↦ y - a * b * x.imK *x.imK + b * x.imJ * x.imJ  at hnx
+    simp only [zero_sub] at hnx 
+    rw [← add_sub _ (a * b * x.imK * x.imK) (a * b * x.imK * x.imK), sub_self, add_zero, 
+      add_assoc, add_comm (- (b * x.imJ * x.imJ)), add_neg_self (b * x.imJ * x.imJ), add_zero,
+      add_comm (-(a * b * x.imK * x.imK))] at hnx
+    refine hnx.trans ?_ 
+    simp only [mul_sub, ← mul_assoc]; ring
+  
   sorry
 
 -- Prop 1.1.7 4 -> 1
@@ -240,6 +280,6 @@ theorem not_div_iff_iso_matrix :
   constructor
   · exact iso_to_not_div a b
   · intro not_div
-    exact norm_in_to_iso_matrix a b $ norm_zero_to_norm_in a b $ not_div_to_norm_zero a b not_div
+    exact norm_in_to_iso_matrix a b normzerotonorminab norm_zero_to_norm_in a b  not_div_to_norm_zero a b not_div
 
 end Quat
