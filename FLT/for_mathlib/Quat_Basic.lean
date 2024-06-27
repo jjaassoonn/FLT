@@ -280,6 +280,6 @@ theorem not_div_iff_iso_matrix :
   constructor
   · exact iso_to_not_div a b
   · intro not_div
-    exact norm_in_to_iso_matrix a b normzerotonorminab norm_zero_to_norm_in a b  not_div_to_norm_zero a b not_div
+    exact norm_in_to_iso_matrix a b ((norm_zero_to_norm_in a b) ((not_div_to_norm_zero a b) not_div))
 
 end Quat
