@@ -132,33 +132,9 @@ def matrix_eqv' (n m : ℕ): (Matrix (Fin n × Fin m) (Fin n × Fin m) K) ≃ₐ
 
 def matrix_comp (n m : ℕ) (A : Type*) [Ring A] [Algebra K A]:
     Matrix (Fin n) (Fin n) (Matrix (Fin m) (Fin m) A) ≃ₐ[K]
-    Matrix (Fin m) (Fin m) (Matrix (Fin n) (Fin n) A) := by
-  have eq1 := Matrix.swap_algHom (Fin n) (Fin m) A K
-  have eq2 := Matrix.comp_algHom (Fin n) (Fin m) A K
-  have eq3 := Matrix.comp_algHom (Fin m) (Fin n) A K
-  -- exact eq2.trans eq1.trans eq3.symm
-  sorry
-
-
-theorem eqv_iff (A B : CSA K): IsBrauerEquivalent A B ↔ ∃(n m : ℕ),
-    Nonempty $ Matrix (Fin n) (Fin n) A ≃ₐ[K] Matrix (Fin m) (Fin m) B := by
-  constructor
-  · intro hAB
-    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso⟩ := hAB
-    refine ⟨m , n, ⟨?_⟩⟩
-    refine AlgEquiv.trans (e1.mapMatrix.trans iso.mapMatrix.mapMatrix) ?_
-    refine AlgEquiv.trans ?_ e2.mapMatrix.symm
-    exact matrix_comp (K := K) m n D'
-    --refine AlgEquiv.trans iso.mapMatrix ?_
-  · intro hAB
-    obtain ⟨n, m, ⟨iso⟩⟩ := hAB
-    obtain ⟨p, hp, D, hD1, hD2, ⟨iso1⟩⟩:= Wedderburn_Artin_algebra_version K A
-    obtain ⟨q, hq, D', hD1', hD2', ⟨iso2⟩⟩:= Wedderburn_Artin_algebra_version K B
-
-    --refine ⟨⟨_, _, _, _, _, _, _, _, _, _, _, _, _⟩⟩
-    sorry
-
-
+    Matrix (Fin m) (Fin m) (Matrix (Fin n) (Fin n) A) :=
+  (Matrix.comp_algHom _ _ _ _).trans $ (Matrix.swap_algHom _ _ _ _).trans
+    (Matrix.comp_algHom _ _ _ _).symm
 
 def CSA_Setoid : Setoid (CSA K) where
   r := IsBrauerEquivalent
@@ -206,11 +182,37 @@ instance mul_one_in (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
     exact tensor_CSA_is_CSA K (Matrix (Fin n) (Fin n) K) A
       (MatrixRing.isCentralSimple K (Fin n)) A.is_central_simple
 
+instance matrix_A (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
+  carrier := Matrix (Fin n) (Fin n) A
+  is_central_simple := by 
+    haveI := A.is_central_simple
+    sorry
+  fin_dim := sorry
 -- example (A B C D : Type) [Ring A] [Ring B] [Ring C] [Ring D] [Algebra K A] [Algebra K B]
 --   [Algebra K C] [Algebra K D] (hAB : A ≃ₐ[K] C) (hCD : B ≃ₐ[K] D):
 --     A ⊗[K] B ⊗[K] C ≃ₐ[K] C ⊗[K] D := by sorry
 
+theorem eqv_iff (A B : CSA K): IsBrauerEquivalent A B ↔ ∃(n m : ℕ), (n ≠ 0) ∧ (m ≠ 0) ∧
+    (Nonempty $ Matrix (Fin n) (Fin n) A ≃ₐ[K] Matrix (Fin m) (Fin m) B) := by
+  constructor
+  · intro hAB
+    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso⟩ := hAB
+    refine ⟨m , n, hm, hn, ⟨?_⟩⟩
+    refine AlgEquiv.trans (e1.mapMatrix.trans iso.mapMatrix.mapMatrix) ?_
+    refine AlgEquiv.trans ?_ e2.mapMatrix.symm
+    exact matrix_comp _ _ _
+    --refine AlgEquiv.trans iso.mapMatrix ?_
+  · intro hAB
+    obtain ⟨n, m, hn, hm, ⟨iso⟩⟩ := hAB
+    obtain ⟨p, hp, D, hD1, hD2, ⟨iso1⟩⟩:= Wedderburn_Artin_algebra_version K A
+    obtain ⟨q, hq, D', hD1', hD2', ⟨iso2⟩⟩:= Wedderburn_Artin_algebra_version K B
+    let e1 := iso1.mapMatrix (m := Fin n)|>.trans (Matrix.comp_algHom _ _ _ _)|>.trans 
+      (Matrix.swap_algHom _ _ _ _)|>.trans (Matrix.comp_algHom _ _ _ _).symm
+    suffices IsBrauerEquivalent (matrix_A n hn A) (matrix_A m hm B) by
+      sorry
+    exact IsBrauerEquivalent.iso_to_eqv (K := K) (matrix_A n hn A) (matrix_A m hm B) iso
 
+  
 lemma choose_span_of_Tensor (A B : Type*) [Ring A] [Algebra K A] [Ring B] [Algebra K B]
     (x : A ⊗[K] B): ∃(I : Finset (A ⊗[K] B)) (x1 : (A ⊗[K] B) → A) (x2 : (A ⊗[K] B) → B),
     x = ∑ i in I, x1 i ⊗ₜ[K] x2 i := by
@@ -330,7 +332,7 @@ def huarongdao (A B C D : Type*) [Ring A] [Ring B] [Ring C] [Ring D] [Algebra K 
     $ Algebra.TensorProduct.comm K (A ⊗[K] C) D
   let eq5 := Algebra.TensorProduct.assoc K B D (A ⊗[K] C)|>.symm
   let eq6 := Algebra.TensorProduct.comm K (B ⊗[K] D) (A ⊗[K] C)
-  exact eq1.trans $ eq2.trans $ eq3.trans $ eq4.trans $ eq5.trans eq6
+  exact eq1.trans eq2.trans eq2.trans  eq3.trans eq4.trans eq4.trans  eq5.trans eq6
 
 def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
     (n m : ℕ) :
@@ -341,7 +343,7 @@ def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra
       $ matrixEquivTensor K B (Fin m)) ?_
     refine AlgEquiv.trans (huarongdao _ _ _ _) ?_
     refine AlgEquiv.trans
-      (Algebra.TensorProduct.congr AlgEquiv.refl $ (matrix_eqv _ _).trans $ matrix_eqv' _ _) ?_
+      (Algebra.TensorProduct.congr AlgEquiv.refl (matrix_eqv _ _).trans (matrix_eqv _ _).trans  matrix_eqv' _ _) ?_
     exact (matrixEquivTensor K (A ⊗[K] B) (Fin (n * m))).symm
 
 def iii (D D' E E': Type*) [DivisionRing D] [DivisionRing D'] [DivisionRing E] [DivisionRing E']
