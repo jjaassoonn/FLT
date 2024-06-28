@@ -310,7 +310,7 @@ local notation "ℚ(√"a")" => Algebra.adjoin ℚ {√a}
 def square_a_iso_to_Q (ha : ∃(y : ℚ), a = y ^ 2) : 
     ℍ[ℚ, a, b] ≃ₐ[ℚ] ℚ := sorry
 
-lemma norm_in_quadratic (x : ℚ(√a)): Algebra.norm ℚ x = x * star x := sorry
+lemma norm_in_quadratic (x : ℚ(√a)): Algebra.norm ℚ x = (x:ℂ) * star (x: ℂ)  := sorry
 
 -- Prop 1.1.7 3 -> 4
 lemma norm_zero_to_norm_in :
