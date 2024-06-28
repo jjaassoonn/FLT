@@ -130,44 +130,125 @@ def square_to_equiv (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0):
         simp only [QuaternionAlgebra.mk_mul_mk, mul_zero, pow_two, zero_mul, add_zero,
           sub_self, zero_sub, QuaternionAlgebra.neg_mk, neg_zero, mul_comm] }
 
-def equiv_mul_square (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0): 
-    ℍ[ℚ, a, b] ≃ₐ[ℚ] ℍ[ℚ, u^2 * a, v^2 * b] where
-  toFun := equiv_to_square a b u v hu hv
-  invFun := square_to_equiv a b u v hu hv
-  left_inv x := by 
-    simp [equiv_to_square, square_to_equiv]; ext
-    · sorry
-    · sorry 
-    · sorry 
-    · sorry
-  right_inv x := by sorry
-  map_mul' := equiv_to_square a b u v hu hv|>.map_mul
-  map_add' := equiv_to_square a b u v hu hv|>.map_add
-  commutes' := equiv_to_square a b u v hu hv|>.commutes 
+lemma to_square_one (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0): 
+    (equiv_to_square a b u v hu hv) ⟨1, 0, 0, 0⟩ = ⟨1, 0, 0, 0⟩ := by
+  simp only [equiv_to_square, QuaternionAlgebra.lift_apply, QuaternionAlgebra.Basis.liftHom_apply]
+  rw [show ⟨1, 0, 0, 0⟩ = (1 : ℍ[ℚ, a, b]) by rfl, QuaternionAlgebra.Basis.lift_one]; rfl
+
+lemma to_square_re (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0) (x : ℍ[ℚ, a, b]):
+    ((equiv_to_square a b u v hu hv) x).re = x.re := by
+  simp only [equiv_to_square, QuaternionAlgebra.lift_apply, QuaternionAlgebra.Basis.liftHom_apply]
+  sorry
+theorem Bij_to_square (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0): 
+    Function.Bijective (equiv_to_square a b u v hu hv) := by 
+  refine ⟨?_, ?_⟩
+  · intro x y; sorry
+  · intro y; sorry
+-- def equiv_mul_square (u v : ℚ) (hu : u ≠ 0) (hv : v ≠ 0): 
+--     ℍ[ℚ, a, b] ≃ₐ[ℚ] ℍ[ℚ, u^2 * a, v^2 * b] where
+--   toFun := equiv_to_square a b u v hu hv
+--   invFun := square_to_equiv a b u v hu hv
+--   left_inv x := by 
+--     have := equiv_to_square a b u v hu hv|>.left_inv x
+--   right_inv x := by sorry
+--   map_mul' := equiv_to_square a b u v hu hv|>.map_mul
+--   map_add' := equiv_to_square a b u v hu hv|>.map_add
+--   commutes' := equiv_to_square a b u v hu hv|>.commutes 
 
 def one_iso_matrix : ℍ[ℚ, 1, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ where
-  toFun x := x.1 • 1 + x.2 • (1 - stdBasisMatrix 2 2 2) + 
-    x.3 • (stdBasisMatrix 1 2 b + stdBasisMatrix 2 1 1) + 
-    x.4 • (stdBasisMatrix 1 2 b - stdBasisMatrix 2 1 1)
-  invFun M := ⟨(M 1 1 + M 2 2)/2, (M 1 1 - M 2 2)/2, ((M 1 2)/b + M 2 1)/2, ((M 1 2)/b - M 2 1)/2⟩ 
-  left_inv x := by 
-    simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, add_apply,
-      smul_apply, one_apply_eq, sub_apply, Fin.reduceEq, and_self, not_false_eq_true,
-      StdBasisMatrix.apply_of_ne, sub_zero, and_false, and_true, add_zero, sub_self, mul_zero,
-      StdBasisMatrix.apply_same, add_sub_add_left_eq_sub, ne_eq, one_apply_ne, zero_add, zero_sub,
-      mul_neg]; ext <;> ring_nf
-    · nth_rw 1 [mul_assoc x.imJ, mul_inv_cancel hb, mul_one, ← mul_add]; norm_num 
-      rw [mul_comm b, mul_assoc x.imK, mul_inv_cancel hb, mul_one]; ring
-    · rw [mul_assoc x.imJ, mul_inv_cancel hb, mul_one, ← mul_add]; norm_num
-      rw [mul_comm b, mul_assoc x.imK, mul_inv_cancel hb, mul_one]; ring
-  right_inv := sorry
+  toFun x := x.1 • 1 + x.2 • (1 - stdBasisMatrix 1 1 2) + 
+    x.3 • (stdBasisMatrix 0 1 b + stdBasisMatrix 1 0 1) + 
+    x.4 • (stdBasisMatrix 0 1 b - stdBasisMatrix 1 0 1)
+  invFun M := ⟨(M 0 0 + M 1 1)/2, (M 0 0 - M 1 1)/2, ((M 0 1)/b + M 1 0)/2, ((M 0 1)/b - M 1 0)/2⟩ 
+  left_inv x := by
+    ext <;> simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, add_apply,
+      smul_apply, ne_eq, zero_ne_one, not_false_eq_true, one_apply_ne, mul_zero, sub_apply,
+      one_ne_zero, and_true, StdBasisMatrix.apply_of_ne, sub_self, add_zero,
+      StdBasisMatrix.apply_same, and_self, zero_add, sub_zero, and_false, zero_sub, mul_neg,
+      sub_self, mul_zero, StdBasisMatrix.apply_same, zero_ne_one]
+    · simp only [Fin.isValue, one_apply_eq, mul_one]
+      rw [show x.imI * (1 - 2) = -x.imI by ring, ← add_assoc]; ring
+    · simp only [Fin.isValue, one_apply_eq, mul_one, add_sub_add_left_eq_sub]; ring
+    · ring_nf; rw [mul_assoc x.imJ b b⁻¹, mul_inv_cancel hb, mul_one, mul_comm b, mul_assoc x.imK,
+      mul_inv_cancel hb]; ring 
+    · ring_nf; rw [mul_assoc x.imJ b b⁻¹, mul_inv_cancel hb, mul_one, mul_comm b, mul_assoc x.imK,
+      mul_inv_cancel hb]; ring 
+
+  right_inv x := by 
+    ext i j 
+    fin_cases i 
+    · fin_cases j
+      · simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, Fin.zero_eta,
+        add_apply, smul_apply, one_apply_eq, sub_apply, one_ne_zero, and_self, not_false_eq_true,
+        StdBasisMatrix.apply_of_ne, sub_zero, and_false, and_true, add_zero, sub_self, mul_zero]
+        ring
+      · simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, Fin.zero_eta,
+        Fin.mk_one, add_apply, smul_apply, ne_eq, zero_ne_one, not_false_eq_true, one_apply_ne,
+        mul_zero, sub_apply, one_ne_zero, and_true, StdBasisMatrix.apply_of_ne, sub_self, add_zero,
+        StdBasisMatrix.apply_same, and_self, zero_add, sub_zero]; ring_nf; 
+        exact (fun hc ↦ (eq_mul_inv_iff_mul_eq₀ hc).mpr) hb rfl |>.symm
+    · fin_cases j
+      · simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, Fin.mk_one,
+        Fin.zero_eta, add_apply, smul_apply, ne_eq, one_ne_zero, not_false_eq_true, one_apply_ne,
+        mul_zero, sub_apply, and_false, StdBasisMatrix.apply_of_ne, sub_self, add_zero, zero_ne_one,
+        and_self, StdBasisMatrix.apply_same, zero_add, zero_sub, mul_neg]; ring
+      · simp only [Fin.isValue, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one, Fin.mk_one,
+        add_apply, smul_apply, one_apply_eq, sub_apply, StdBasisMatrix.apply_same, zero_ne_one,
+        and_true, not_false_eq_true, StdBasisMatrix.apply_of_ne, and_false, add_zero, sub_self,
+        mul_zero]; ring
+
   map_mul' x y := by 
     simp only [QuaternionAlgebra.mul_re, one_mul, QuaternionAlgebra.mul_imI, Fin.isValue,
       QuaternionAlgebra.mul_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
       QuaternionAlgebra.mul_imK]; ext i j;
-    sorry
+    fin_cases i; fin_cases j 
+    · simp only [Fin.isValue, Fin.zero_eta, add_apply, smul_apply, one_apply_eq, smul_eq_mul,
+      mul_one, sub_apply, one_ne_zero, and_self, not_false_eq_true, StdBasisMatrix.apply_of_ne,
+      sub_zero, and_false, and_true, add_zero, sub_self, mul_zero]
+      sorry
+    · simp only [Fin.isValue, Fin.zero_eta, Fin.mk_one, add_apply, smul_apply, ne_eq, zero_ne_one,
+      not_false_eq_true, one_apply_ne, smul_eq_mul, mul_zero, sub_apply, one_ne_zero, and_true,
+      StdBasisMatrix.apply_of_ne, sub_self, add_zero, StdBasisMatrix.apply_same, and_self, zero_add,
+      sub_zero]
+      sorry
+    · fin_cases j 
+      · simp only [Fin.isValue, Fin.mk_one, Fin.zero_eta, add_apply, smul_apply, ne_eq,
+        one_ne_zero, not_false_eq_true, one_apply_ne, smul_eq_mul, mul_zero, sub_apply, and_false,
+        StdBasisMatrix.apply_of_ne, sub_self, add_zero, zero_ne_one, and_self,
+        StdBasisMatrix.apply_same, zero_add, zero_sub, mul_neg, mul_one, neg_add_rev, neg_sub]
+        sorry
+      · simp only [Fin.isValue, Fin.mk_one, add_apply, smul_apply, one_apply_eq, smul_eq_mul,
+        mul_one, sub_apply, StdBasisMatrix.apply_same, zero_ne_one, and_true, not_false_eq_true,
+        StdBasisMatrix.apply_of_ne, and_false, add_zero, sub_self, mul_zero]
+        sorry
 
-  map_add' := sorry
+  map_add' x y := by 
+    ext i j; fin_cases i
+    · fin_cases j
+      · simp only [QuaternionAlgebra.add_re, QuaternionAlgebra.add_imI, Fin.isValue,
+        QuaternionAlgebra.add_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
+        QuaternionAlgebra.add_imK, Fin.zero_eta, add_apply, smul_apply, one_apply_eq, sub_apply,
+        one_ne_zero, and_self, not_false_eq_true, StdBasisMatrix.apply_of_ne, sub_zero, and_false,
+        and_true, add_zero, sub_self, mul_zero]; ring
+      · simp only [QuaternionAlgebra.add_re, QuaternionAlgebra.add_imI, Fin.isValue,
+        QuaternionAlgebra.add_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
+        QuaternionAlgebra.add_imK, Fin.zero_eta, Fin.mk_one, add_apply, smul_apply, ne_eq,
+        zero_ne_one, not_false_eq_true, one_apply_ne, mul_zero, sub_apply, one_ne_zero, and_true,
+        StdBasisMatrix.apply_of_ne, sub_self, add_zero, StdBasisMatrix.apply_same, and_self,
+        zero_add, sub_zero]; ring
+    · fin_cases j
+      · simp only [QuaternionAlgebra.add_re, QuaternionAlgebra.add_imI, Fin.isValue,
+        QuaternionAlgebra.add_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
+        QuaternionAlgebra.add_imK, Fin.mk_one, Fin.zero_eta, add_apply, smul_apply, ne_eq,
+        one_ne_zero, not_false_eq_true, one_apply_ne, mul_zero, sub_apply, and_false,
+        StdBasisMatrix.apply_of_ne, sub_self, add_zero, zero_ne_one, and_self,
+        StdBasisMatrix.apply_same, zero_add, zero_sub, mul_neg, neg_add_rev]; ring
+      · simp only [QuaternionAlgebra.add_re, QuaternionAlgebra.add_imI, Fin.isValue,
+        QuaternionAlgebra.add_imJ, smul_add, smul_stdBasisMatrix, smul_eq_mul, mul_one,
+        QuaternionAlgebra.add_imK, Fin.mk_one, add_apply, smul_apply, one_apply_eq, sub_apply,
+        StdBasisMatrix.apply_same, zero_ne_one, and_true, not_false_eq_true,
+        StdBasisMatrix.apply_of_ne, and_false, add_zero, sub_self, mul_zero]; ring
+
   commutes' q := by 
     simp only [QuaternionAlgebra.coe_algebraMap, QuaternionAlgebra.coe_re,
       QuaternionAlgebra.coe_imI, Fin.isValue, zero_smul, add_zero, QuaternionAlgebra.coe_imJ,
@@ -213,10 +294,23 @@ lemma not_div_to_norm_zero :
   obtain ⟨y, hy1, hy2⟩ := non_zero_norm_iff_div a b |>.2 iff_1 x hx 
   specialize hy y ; tauto
 
+open Polynomial
+abbrev f_a : Polynomial ℚ := X^2 - a • 1
+
+instance f_a_irr (ha : ¬ ∃ y, a = y ^ 2): Irreducible (f_a a) := by
+  simp only [not_exists, ← ne_eq] at ha
+  unfold f_a; rw [← Rat.num_div_den a]
+  sorry 
+
+instance (ha : ¬ ∃ y, a = y ^ 2) : Field (AdjoinRoot (f_a a)) := by 
+  exact @AdjoinRoot.instField (f := f_a a) (fact_iff.2 (f_a_irr a ha))
+
 local notation "ℚ(√"a")" => Algebra.adjoin ℚ {√a}
 
 def square_a_iso_to_Q (ha : ∃(y : ℚ), a = y ^ 2) : 
     ℍ[ℚ, a, b] ≃ₐ[ℚ] ℚ := sorry
+
+lemma norm_in_quadratic (x : ℚ(√a)): Algebra.norm ℚ x = x * star x := sorry
 
 -- Prop 1.1.7 3 -> 4
 lemma norm_zero_to_norm_in :
@@ -280,6 +374,6 @@ theorem not_div_iff_iso_matrix :
   constructor
   · exact iso_to_not_div a b
   · intro not_div
-    exact norm_in_to_iso_matrix a b ((norm_zero_to_norm_in a b) ((not_div_to_norm_zero a b) not_div))
+    exact norm_in_to_iso_matrix a b normzerotonorminab norm_zero_to_norm_in a b  not_div_to_norm_zero a b not_div
 
 end Quat
