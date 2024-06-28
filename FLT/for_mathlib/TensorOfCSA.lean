@@ -1,4 +1,5 @@
 import FLT.for_mathlib.IsCentralSimple
+import FLT.for_mathlib.Matrixstuff
 
 suppress_compilation
 universe u v w
@@ -41,8 +42,8 @@ def tensor_self_op (hA: IsCentralSimple K A) [FiniteDimensional K A]
 
 def tensor_op_self (hA: IsCentralSimple K A) [FiniteDimensional K A]
     (n : ℕ) (hn : n = FiniteDimensional.finrank K A):
-    Aᵐᵒᵖ ⊗[K] A ≃ₐ[K] (Matrix (Fin n) (Fin n) K) := 
-  (Algebra.TensorProduct.comm _ _ _).trans $ tensor_self_op K A hA n hn
+    Aᵐᵒᵖ ⊗[K] A ≃ₐ[K] (Matrix (Fin n) (Fin n) K) :=
+  (Algebra.TensorProduct.comm _ _ _).trans $ tensor_self_op _ _ hA _ hn
 
 /-
 ## TODO:
@@ -85,7 +86,7 @@ structure BrauerEquivalence (A B : CSA.{u, v} K) :=
 (D' : Type v) (div' : DivisionRing D') (alg' : Algebra K D')
 (isoLeft : A ≃ₐ[K] Matrix (Fin indexLeft) (Fin indexLeft) D)
 (isoRight : B ≃ₐ[K] Matrix (Fin indexRight) (Fin indexRight) D')
-(isobase : D ≃+* D')
+(isobase : D ≃ₐ[K] D')
 
 abbrev IsBrauerEquivalent (A B : CSA K) := Nonempty (BrauerEquivalence A B)
 
@@ -93,7 +94,7 @@ namespace IsBrauerEquivalent
 
 def refl (A : CSA K) : IsBrauerEquivalent A A := by
    obtain ⟨n, hn, D, inst1, inst2, ⟨e⟩⟩ := Wedderburn_Artin_algebra_version K A
-   refine ⟨n, n, hn, hn, D, inst1, inst2, D, inst1, inst2, e, e, RingEquiv.refl _⟩
+   refine ⟨n, n, hn, hn, D, inst1, inst2, D, inst1, inst2, e, e, AlgEquiv.refl ⟩
 
 def symm {A B : CSA K} (h : IsBrauerEquivalent A B) : IsBrauerEquivalent B A := by
    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, e⟩ := h
@@ -102,7 +103,7 @@ def symm {A B : CSA K} (h : IsBrauerEquivalent A B) : IsBrauerEquivalent B A := 
 lemma iso_to_eqv (A B : CSA K) (h : A ≃ₐ[K] B) : IsBrauerEquivalent A B := by
   obtain ⟨n, hn, D, inst1, inst2, ⟨e⟩⟩ := Wedderburn_Artin_algebra_version K A
   obtain ⟨m, hm, D', inst1', inst2', ⟨e'⟩⟩ := Wedderburn_Artin_algebra_version K B
-  have := (Wedderburn_Artin_divisionRing_unique_algebra_version K A D D' n m hn hm e
+  have := (Wedderburn_Artin_divisionRing_unique_algebra_version K D D' n m hn hm
     ((e.symm.trans h).trans e'))
   obtain ⟨iso⟩ := this
   exact ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e, e', iso⟩
@@ -112,7 +113,7 @@ def trans {A B C : CSA K} (hAB : IsBrauerEquivalent A B) (hBC : IsBrauerEquivale
   obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso1⟩ := hAB
   obtain ⟨p, q, hp, hq, E, inst3, inst4, E', inst3', inst4', e1', e2', iso2⟩ := hBC
   obtain ⟨isoiso⟩ :=
-    Wedderburn_Artin_divisionRing_unique D' E m p hm hp $ e2.symm.trans e1'
+    Wedderburn_Artin_divisionRing_unique_algebra_version K D' E m p hm hp $ e2.symm.trans e1'
   refine ⟨_, _, hn, hq, _, _, _, _, _, _, e1, e2', iso1.trans $ isoiso.trans iso2⟩
 
 theorem Braur_is_eqv : Equivalence (IsBrauerEquivalent (K := K)) where
@@ -126,18 +127,36 @@ namespace BrauerGroup
 
 open scoped Classical
 
-def matrix_comp (n m : ℕ) (A : Type*) [Ring A] [Algebra K A]: 
-    Matrix (Fin n) (Fin n) $ Matrix (Fin m) (Fin m) A ≃ₐ[K] Matrix (Fin $ n*m) (Fin $ n*m) A := by 
+def matrix_eqv' (n m : ℕ): (Matrix (Fin n × Fin m) (Fin n × Fin m) K) ≃ₐ[K]
+    Matrix (Fin (n * m)) (Fin (n * m)) K := Matrix.reindexAlgEquiv K finProdFinEquiv
+
+def matrix_comp (n m : ℕ) (A : Type*) [Ring A] [Algebra K A]:
+    Matrix (Fin n) (Fin n) (Matrix (Fin m) (Fin m) A) ≃ₐ[K]
+    Matrix (Fin m) (Fin m) (Matrix (Fin n) (Fin n) A) := by
+  have eq1 := Matrix.swap_algHom (Fin n) (Fin m) A K
+  have eq2 := Matrix.comp_algHom (Fin n) (Fin m) A K
+  have eq3 := Matrix.comp_algHom (Fin m) (Fin n) A K
+  -- exact eq2.trans eq1.trans eq3.symm
   sorry
 
-theorem eqv_iff (A B : CSA K): IsBrauerEquivalent A B ↔ ∃(n m : ℕ), 
+
+theorem eqv_iff (A B : CSA K): IsBrauerEquivalent A B ↔ ∃(n m : ℕ),
     Nonempty $ Matrix (Fin n) (Fin n) A ≃ₐ[K] Matrix (Fin m) (Fin m) B := by
   constructor
-  · intro hAB 
-    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso⟩ := hAB 
+  · intro hAB
+    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso⟩ := hAB
+    refine ⟨m , n, ⟨?_⟩⟩
+    refine AlgEquiv.trans (e1.mapMatrix.trans iso.mapMatrix.mapMatrix) ?_
+    refine AlgEquiv.trans ?_ e2.mapMatrix.symm
+    exact matrix_comp (K := K) m n D'
+    --refine AlgEquiv.trans iso.mapMatrix ?_
+  · intro hAB
+    obtain ⟨n, m, ⟨iso⟩⟩ := hAB
+    obtain ⟨p, hp, D, hD1, hD2, ⟨iso1⟩⟩:= Wedderburn_Artin_algebra_version K A
+    obtain ⟨q, hq, D', hD1', hD2', ⟨iso2⟩⟩:= Wedderburn_Artin_algebra_version K B
 
+    --refine ⟨⟨_, _, _, _, _, _, _, _, _, _, _, _, _⟩⟩
     sorry
-  · sorry
 
 
 
@@ -222,32 +241,34 @@ open scoped Kronecker in
 theorem matrixEquivForward_tmul (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n]
     (M : Matrix m m K) (N : Matrix n n K) : matrixEquivForward m n (N ⊗ₜ M) = N ⊗ₖ M := rfl
 
+set_option maxHeartbeats 800000 in
+set_option synthInstance.maxHeartbeats 200000 in
 def matrixEquivRev (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
     Matrix (m × n) (m × n) K →ₐ[K] Matrix m m K ⊗[K] Matrix n n K :=
   AlgHom.ofLinearMap
     (Basis.constr (S := K) (Matrix.stdBasis K _ _) fun p =>
       Matrix.stdBasisMatrix p.1.1 p.2.1 1 ⊗ₜ Matrix.stdBasisMatrix p.1.2 p.2.2 1)
-    sorry
-    sorry
+    (by
+      simp only [Basis.constr_apply_fintype, Basis.equivFun_apply, Fintype.sum_prod_type]
+
+      sorry)
+  sorry
 
 def matrix_eqv (n m : ℕ): (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K]
     Matrix (Fin n × Fin m) (Fin n × Fin m) K where
   toFun := matrixEquivForward (Fin m) (Fin n)
   invFun := matrixEquivRev (Fin m) (Fin n)
-  left_inv := by 
-    intro x 
-    unfold matrixEquivForward matrixEquivRev 
+  left_inv := by
+    intro x
+    unfold matrixEquivForward matrixEquivRev
     simp only [Algebra.TensorProduct.algHomOfLinearMapTensorProduct_apply, AlgHom.ofLinearMap_apply,
       Basis.constr_apply_fintype, Basis.equivFun_apply, Fintype.sum_prod_type]
-    
+
     sorry
   right_inv := sorry
   map_mul' := (matrixEquivForward (Fin m) (Fin n)).map_mul
-  map_add' := (matrixEquivForward (Fin m) (Fin n)).map_add 
-  commutes' := (matrixEquivForward (Fin m) (Fin n)).commutes 
-
-def matrix_eqv' (n m : ℕ): (Matrix (Fin n × Fin m) (Fin n × Fin m) K) ≃ₐ[K]
-    Matrix (Fin (n * m)) (Fin (n * m)) K := Matrix.reindexAlgEquiv K finProdFinEquiv
+  map_add' := (matrixEquivForward (Fin m) (Fin n)).map_add
+  commutes' := (matrixEquivForward (Fin m) (Fin n)).commutes
 
 lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     IsBrauerEquivalent A (one_mul_in n hn A) := by
@@ -267,7 +288,7 @@ lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
        $ matrix_eqv m n) ?_
     refine AlgEquiv.trans ?_ (matrixEquivTensor K D (Fin $ m*n)).symm
     exact Algebra.TensorProduct.congr AlgEquiv.refl $ matrix_eqv' m n
-  exact ⟨_, (m * n), hm, Nat.mul_ne_zero hm hn, _, _, _, _, _, _, e, hA, RingEquiv.refl _⟩
+  exact ⟨_, (m * n), hm, Nat.mul_ne_zero hm hn, _, _, _, _, _, _, e, hA, AlgEquiv.refl⟩
 
 lemma mul_one (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     IsBrauerEquivalent A (mul_one_in n hn A) := by
@@ -287,52 +308,52 @@ lemma mul_one (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     refine AlgEquiv.trans (Algebra.TensorProduct.congr AlgEquiv.refl $ matrix_eqv m n) ?_
     refine AlgEquiv.trans ?_ (matrixEquivTensor K D (Fin (m * n))).symm
     exact Algebra.TensorProduct.congr AlgEquiv.refl $ matrix_eqv' m n
-  exact ⟨_, (m*n), hm, Nat.mul_ne_zero hm hn, _, _, _, _, _, _, e, hA, RingEquiv.refl _⟩
+  exact ⟨_, (m*n), hm, Nat.mul_ne_zero hm hn, _, _, _, _, _, _, e, hA, AlgEquiv.refl⟩
 
 lemma mul_assoc (A B C : CSA K) :
     IsBrauerEquivalent (mul (mul A B) C) (mul A (mul B C)) :=
   IsBrauerEquivalent.iso_to_eqv (K := K) _ _ $ Algebra.TensorProduct.assoc _ _ _ _
 
 lemma mul_inv (A : CSA.{u, u} K) : IsBrauerEquivalent (mul A (inv (K := K) A)) one_in' := by
-  
+
   sorry
 
 def huarongdao (A B C D : Type*) [Ring A] [Ring B] [Ring C] [Ring D] [Algebra K A]
     [Algebra K B] [Algebra K C] [Algebra K D]:
     (A ⊗[K] B) ⊗[K] C ⊗[K] D ≃ₐ[K] (A ⊗[K] C) ⊗[K] B ⊗[K] D := by
-  let eq1 := Algebra.TensorProduct.congr (R := K) 
+  let eq1 := Algebra.TensorProduct.congr (R := K)
     (Algebra.TensorProduct.comm K A B) $ AlgEquiv.refl (A₁ := C ⊗[K] D)
   let eq2 := Algebra.TensorProduct.assoc K B A (C ⊗[K] D)
-  let eq3 := Algebra.TensorProduct.congr (AlgEquiv.refl (R := K) (A₁ := B)) 
-    $ Algebra.TensorProduct.assoc K A C D|>.symm 
+  let eq3 := Algebra.TensorProduct.congr (AlgEquiv.refl (R := K) (A₁ := B))
+    $ Algebra.TensorProduct.assoc K A C D|>.symm
   let eq4 := Algebra.TensorProduct.congr (AlgEquiv.refl (R := K) (A₁ := B))
     $ Algebra.TensorProduct.comm K (A ⊗[K] C) D
   let eq5 := Algebra.TensorProduct.assoc K B D (A ⊗[K] C)|>.symm
   let eq6 := Algebra.TensorProduct.comm K (B ⊗[K] D) (A ⊗[K] C)
-  exact eq1.trans eq2.trans eq2.trans  eq3.trans eq4.trans eq4.trans  eq5.trans eq6
+  exact eq1.trans $ eq2.trans $ eq3.trans $ eq4.trans $ eq5.trans eq6
 
 def kroneckerMatrixTensor' (A B: Type*) [Ring A] [Ring B] [Algebra K A] [Algebra K B]
     (n m : ℕ) :
-      (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K] 
+      (Matrix (Fin n) (Fin n) A) ⊗[K] (Matrix (Fin m) (Fin m) B) ≃ₐ[K]
       (Matrix (Fin (n*m)) (Fin (n*m)) (A ⊗[K] B)) := by
     have := matrixEquivTensor K A (Fin n)
-    refine AlgEquiv.trans (Algebra.TensorProduct.congr (matrixEquivTensor K A (Fin n)) 
+    refine AlgEquiv.trans (Algebra.TensorProduct.congr (matrixEquivTensor K A (Fin n))
       $ matrixEquivTensor K B (Fin m)) ?_
     refine AlgEquiv.trans (huarongdao _ _ _ _) ?_
-    refine AlgEquiv.trans 
-      (Algebra.TensorProduct.congr AlgEquiv.refl (matrix_eqv _ _).trans (matrix_eqv _ _).trans  matrix_eqv' _ _) ?_
+    refine AlgEquiv.trans
+      (Algebra.TensorProduct.congr AlgEquiv.refl $ (matrix_eqv _ _).trans $ matrix_eqv' _ _) ?_
     exact (matrixEquivTensor K (A ⊗[K] B) (Fin (n * m))).symm
 
 def iii (D D' E E': Type*) [DivisionRing D] [DivisionRing D'] [DivisionRing E] [DivisionRing E']
-    [Algebra K D] [Algebra K D'] [Algebra K E] [Algebra K E'] (e : D ≃+* D') (e' : E ≃+* E') : 
-    D ⊗[K] E ≃+* D' ⊗[K] E' := by 
+    [Algebra K D] [Algebra K D'] [Algebra K E] [Algebra K E'] (e : D ≃+* D') (e' : E ≃+* E') :
+    D ⊗[K] E ≃+* D' ⊗[K] E' := by
   -- have := Algebra.TensorProduct.congr e e'
   sorry
 
 
 theorem eqv_tensor_eqv (A B C D : CSA K) (hAB : IsBrauerEquivalent A B) (hCD : IsBrauerEquivalent C D) :
     IsBrauerEquivalent (mul A C) (mul B D) := by
-  obtain ⟨n, m, hn, hm, D1, inst1, inst2, D2, inst1', inst2', e1, e2, iso1⟩ := hAB 
+  obtain ⟨n, m, hn, hm, D1, inst1, inst2, D2, inst1', inst2', e1, e2, iso1⟩ := hAB
   obtain ⟨p, q, hp, hq, E1, inst3, inst4, E2, inst3', inst4', e1', e2', iso2⟩ := hCD
   suffices BrauerEquivalence (mul A C) (mul B D) from ⟨this⟩
   unfold mul
@@ -341,13 +362,13 @@ theorem eqv_tensor_eqv (A B C D : CSA K) (hAB : IsBrauerEquivalent A B) (hCD : I
 
 abbrev BrGroup := Quotient $ CSA_Setoid (K := K)
 
-instance Mul: Mul $ BrGroup (K := K) := 
-  ⟨Quotient.lift₂ (fun A B ↦ Quotient.mk (CSA_Setoid) $ BrauerGroup.mul A B) 
-  (by 
+instance Mul: Mul $ BrGroup (K := K) :=
+  ⟨Quotient.lift₂ (fun A B ↦ Quotient.mk (CSA_Setoid) $ BrauerGroup.mul A B)
+  (by
     simp only [Quotient.eq]
     intro A B C D hAB hCD
     change IsBrauerEquivalent _ _ at *
-    exact eqv_tensor_eqv A C B D hAB hCD)⟩ 
+    exact eqv_tensor_eqv A C B D hAB hCD)⟩
 
 theorem mul_assoc' (A B C : BrGroup (K := K)) : A * B * C = A * (B * C) := by
   sorry
@@ -359,10 +380,10 @@ instance Bruaer_Group : Group (BrGroup (K := K)) where
   mul_assoc := mul_assoc'
   one := 1
   one_mul := sorry
-  mul_one A := by 
-    --refine A.induction_on 
-    --intro A 
-    --change IsBrauerEquivalent _ _ 
+  mul_one A := by
+    --refine A.induction_on
+    --intro A
+    --change IsBrauerEquivalent _ _
     sorry
   inv := Quotient.lift (fun A ↦ Quotient.mk (CSA_Setoid) $ inv A) (by sorry)
   mul_left_inv := sorry
