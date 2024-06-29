@@ -1,4 +1,4 @@
-import Mathlib.ALgebra.QuaternionBasis
+import Mathlib.Algebra.QuaternionBasis
 import Mathlib.Tactic
 
 suppress_compilation
