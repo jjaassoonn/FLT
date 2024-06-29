@@ -200,20 +200,13 @@ lemma support_subset_finset_sum_monomial {ι : Type*}  (s : Finset ι)
     · exact support_add
     simp only [Finset.cons_eq_insert, Finset.image_insert]
     intro x hx
-    rw [Finset.mem_union] at hx
+
+    rw [Finset.mem_insert, Finset.mem_union] at *
     rcases hx with (hx|hx)
-    · if h : coeff i = 0
-      then
-        rw [h] at hx
-        simp at hx
+    · if h : coeff i = 0 then simp_all
       else
-        simp only [support_monomial _ h, Finset.mem_singleton] at hx
-        simp only [Finset.mem_insert, Finset.mem_image]
-        tauto
-    · specialize ih hx
-      simp only [Finset.mem_image, Finset.mem_insert] at ih ⊢
-      right
-      exact ih
+        rw [support_monomial (deg i) h, Finset.mem_singleton] at hx; tauto
+    · right; exact ih hx
 
 lemma dvd_natDegree_of_mem_adjoin
     {m : ℕ} {p : K[X]} (h : p ∈ (Algebra.adjoin K {X^m} : Subalgebra K K[X])) :
@@ -228,7 +221,7 @@ lemma dvd_natDegree_of_mem_adjoin
   · rw [← map_sum, ← q.as_sum_range]; exact hp
 
   simp_rw [aeval_monomial, ← pow_mul, algebraMap_eq]
-  have subset1:= support_subset_finset_sum_monomial K (Finset.range (q.natDegree + 1))
+  have subset1 := support_subset_finset_sum_monomial K (Finset.range (q.natDegree + 1))
     (fun x => m * x) (fun x => q.coeff x)
   simp_rw [← C_mul_X_pow_eq_monomial] at subset1
   suffices ∀ i ∈ Finset.image (fun x ↦ m * x) (Finset.range (q.natDegree + 1)), m ∣ i from
@@ -244,16 +237,15 @@ lemma intersect_eq :
   intro x hx
   rw [Algebra.mem_iInf] at hx
   have (i : ℕ) : p^i ∣ x.natDegree := by
-    apply dvd_natDegree_of_mem_adjoin; apply hx
-
+    exact dvd_natDegree_of_mem_adjoin K (hx i)
   if h : x.natDegree = 0 then
     rw [natDegree_eq_zero] at h
     rw [Algebra.mem_bot]
     exact h
   else
     obtain ⟨i, hi⟩ : ∃ (i : ℕ), x.natDegree < p^i :=
-      pow_unbounded_of_one_lt x.natDegree $ Nat.Prime.one_lt Fact.out
-    have := Nat.le_of_dvd (by omega) $ this i
+      pow_unbounded_of_one_lt x.natDegree (Nat.Prime.one_lt Fact.out)
+    have := Nat.le_of_dvd (by omega) (this i)
     omega
 
 lemma minpoly_mem_aux (d : D) :
@@ -261,14 +253,13 @@ lemma minpoly_mem_aux (d : D) :
   by_contra! r
   have := intersect_eq p K
   have mem1 : minpoly K d ∈ (⊥ : Subalgebra K K[X]) := by
-    rw [← intersect_eq p, Algebra.mem_iInf]
-    exact r
+    rwa [← this, Algebra.mem_iInf]
   rw [Algebra.mem_bot] at mem1
   obtain ⟨c, hc⟩ := mem1
   have alg_ext := Algebra.IsAlgebraic.of_finite K D
   have : 0 < (minpoly K d).natDegree := minpoly.natDegree_pos (Algebra.IsIntegral.isIntegral d)
   rw [← hc, algebraMap_eq, natDegree_C] at this
-  exact lt_irrefl _ this
+  exact lt_irrefl 0 this
 
 lemma minpoly_mem (d : D) :
     ∃ (m : ℕ), 0 < m ∧
@@ -290,7 +281,7 @@ variable {K} in
 lemma edison_lemma2 {a : K[X]} {m : ℕ} (ha : a ∈ Algebra.adjoin K {X^m}) :
     ∃ (b : K[X]), b.comp (X^m) = a := by
   refine Algebra.adjoin_induction ha ?_ ?_ ?_ ?_
-  · rintro _ ⟨⟩
+  · rintro _ rfl
     exact ⟨X, by simp⟩
   · intro k
     refine ⟨C k, by simp⟩
@@ -298,6 +289,29 @@ lemma edison_lemma2 {a : K[X]} {m : ℕ} (ha : a ∈ Algebra.adjoin K {X^m}) :
     exact ⟨a + b, by simp⟩
   · rintro _ _ ⟨a, rfl⟩ ⟨b, rfl⟩
     exact ⟨a * b, by simp⟩
+
+lemma edison_lemma32 (d : D) {hff : f = minpoly K d}{m : ℕ}(g : K[X])
+    (hq: g.comp (X^p^(m-1)) = f) : Irreducible g where
+      not_unit := by
+        by_contra! hg
+        have ⟨hf1, hf2⟩ := minpoly.irreducible (A := K) (x := d) (Algebra.IsIntegral.isIntegral d)
+        rw [Polynomial.isUnit_iff_degree_eq_zero] at hg
+        have f_ne_0 : f ≠ 0 := by
+          rw [hff] ; exact minpoly.ne_zero (Algebra.IsIntegral.isIntegral d)
+        have g_ne_0 : g ≠ 0 := by
+          by_contra! hg1
+          rw [hg1, zero_comp] at hq
+          exact f_ne_0 hq.symm
+        have g_nat : g.natDegree = 0 := (degree_eq_iff_natDegree_eq g_ne_0).1 hg
+        have f_nat : f.natDegree = 0 := by
+          rw [← hq, natDegree_comp, g_nat, zero_mul]
+        rw [← degree_eq_iff_natDegree_eq f_ne_0] at f_nat
+        norm_cast at f_nat
+        rw [← Polynomial.isUnit_iff_degree_eq_zero, hff] at f_nat
+        exact hf1 f_nat
+      isUnit_or_isUnit' := by
+        sorry
+
 
 lemma edison_lemma3 (d : D) {hff : f = minpoly K d}{m : ℕ}(g : K[X])
     (hq: g.comp (X^p^(m-1)) = f) : Irreducible g :=
@@ -473,3 +487,6 @@ lemma findim_divring_over_sep_closed [Infinite K] (D : Type*)
             rw [Nat.sub_one_add_one_eq_of_pos hm]
             exact this
         tauto)).mul_comm
+
+
+lemma aa : 1 = 1 := by simp_all
