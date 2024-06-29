@@ -205,22 +205,77 @@ def one_iso_matrix : ℍ[ℚ, 1, b] ≃ₐ[ℚ] Matrix (Fin 2) (Fin 2) ℚ where
     · simp only [Fin.isValue, Fin.zero_eta, add_apply, smul_apply, one_apply_eq, smul_eq_mul,
       mul_one, sub_apply, one_ne_zero, and_self, not_false_eq_true, StdBasisMatrix.apply_of_ne,
       sub_zero, and_false, and_true, add_zero, sub_self, mul_zero]
-      sorry
+      repeat rw [Matrix.mul_add]; repeat rw [Matrix.add_mul]
+      simp only [Algebra.mul_smul_comm, mul_one, Fin.isValue, smul_stdBasisMatrix, smul_eq_mul,
+        Algebra.smul_mul_assoc, one_mul, ne_eq, one_ne_zero, not_false_eq_true,
+        StdBasisMatrix.mul_of_ne, StdBasisMatrix.mul_same, zero_add, zero_ne_one, add_zero,
+        add_apply, smul_apply, one_apply_eq, sub_apply, and_self, StdBasisMatrix.apply_of_ne,
+        sub_zero, and_false, and_true, sub_self, mul_zero, StdBasisMatrix.mul_left_apply_same,
+        one_apply_ne, StdBasisMatrix.mul_left_apply_of_ne, StdBasisMatrix.mul_right_apply_of_ne,
+        StdBasisMatrix.mul_right_apply_same, zero_mul, StdBasisMatrix.apply_same, zero_sub, mul_neg]
+      repeat rw [Matrix.mul_sub]; repeat rw [Matrix.sub_mul]
+      simp only [mul_one, Fin.isValue, one_mul, StdBasisMatrix.mul_same, sub_apply, one_apply_eq,
+        one_ne_zero, and_self, not_false_eq_true, StdBasisMatrix.apply_of_ne, sub_zero, sub_self,
+        ne_eq, zero_ne_one, StdBasisMatrix.mul_of_ne, and_false, and_true, mul_zero, add_zero,
+        zero_add, zero_sub, neg_apply, neg_zero, StdBasisMatrix.apply_same, mul_neg]; ring
     · simp only [Fin.isValue, Fin.zero_eta, Fin.mk_one, add_apply, smul_apply, ne_eq, zero_ne_one,
       not_false_eq_true, one_apply_ne, smul_eq_mul, mul_zero, sub_apply, one_ne_zero, and_true,
       StdBasisMatrix.apply_of_ne, sub_self, add_zero, StdBasisMatrix.apply_same, and_self, zero_add,
       sub_zero]
-      sorry
+      repeat rw [Matrix.mul_add]; repeat rw [Matrix.add_mul]
+      simp only [Algebra.mul_smul_comm, mul_one, Fin.isValue, smul_stdBasisMatrix, smul_eq_mul,
+        Algebra.smul_mul_assoc, one_mul, ne_eq, one_ne_zero, not_false_eq_true,
+        StdBasisMatrix.mul_of_ne, StdBasisMatrix.mul_same, zero_add, zero_ne_one, add_zero,
+        add_apply, smul_apply, one_apply_ne, mul_zero, sub_apply, and_true,
+        StdBasisMatrix.apply_of_ne, sub_self, StdBasisMatrix.apply_same, and_self, sub_zero,
+        StdBasisMatrix.mul_left_apply_same, one_apply_eq, StdBasisMatrix.mul_left_apply_of_ne,
+        StdBasisMatrix.mul_right_apply_same, and_false, zero_mul,
+        StdBasisMatrix.mul_right_apply_of_ne]
+      repeat rw [Matrix.mul_sub]; repeat rw [Matrix.sub_mul]
+      simp only [mul_one, Fin.isValue, one_mul, StdBasisMatrix.mul_same, sub_apply, ne_eq,
+        zero_ne_one, not_false_eq_true, one_apply_ne, one_ne_zero, and_true,
+        StdBasisMatrix.apply_of_ne, sub_self, mul_zero, zero_add, StdBasisMatrix.mul_of_ne,
+        sub_zero, StdBasisMatrix.apply_same, and_self, zero_sub, neg_apply, neg_zero, and_false,
+        add_zero]; ring
     · fin_cases j
       · simp only [Fin.isValue, Fin.mk_one, Fin.zero_eta, add_apply, smul_apply, ne_eq,
         one_ne_zero, not_false_eq_true, one_apply_ne, smul_eq_mul, mul_zero, sub_apply, and_false,
         StdBasisMatrix.apply_of_ne, sub_self, add_zero, zero_ne_one, and_self,
         StdBasisMatrix.apply_same, zero_add, zero_sub, mul_neg, mul_one, neg_add_rev, neg_sub]
-        sorry
+        repeat rw [Matrix.mul_add]; repeat rw [Matrix.add_mul]
+        simp only [Algebra.mul_smul_comm, mul_one, Fin.isValue, smul_stdBasisMatrix, smul_eq_mul,
+          Algebra.smul_mul_assoc, one_mul, ne_eq, one_ne_zero, not_false_eq_true,
+          StdBasisMatrix.mul_of_ne, StdBasisMatrix.mul_same, zero_add, zero_ne_one, add_zero,
+          add_apply, smul_apply, one_apply_ne, mul_zero, sub_apply, and_false,
+          StdBasisMatrix.apply_of_ne, sub_self, and_self, StdBasisMatrix.apply_same, zero_sub,
+          mul_neg, StdBasisMatrix.mul_left_apply_of_ne, StdBasisMatrix.mul_left_apply_same,
+          one_apply_eq, sub_zero, StdBasisMatrix.mul_right_apply_of_ne,
+          StdBasisMatrix.mul_right_apply_same, and_true, zero_mul]
+        repeat rw [Matrix.mul_sub]; repeat rw [Matrix.sub_mul]
+        simp only [mul_one, Fin.isValue, one_mul, StdBasisMatrix.mul_same, sub_apply, ne_eq,
+          one_ne_zero, not_false_eq_true, one_apply_ne, and_false, StdBasisMatrix.apply_of_ne,
+          sub_self, mul_zero, zero_add, zero_ne_one, StdBasisMatrix.mul_of_ne, sub_zero, and_self,
+          StdBasisMatrix.apply_same, zero_sub, mul_neg, neg_sub, neg_apply, neg_zero, and_true,
+          add_zero]; ring
       · simp only [Fin.isValue, Fin.mk_one, add_apply, smul_apply, one_apply_eq, smul_eq_mul,
         mul_one, sub_apply, StdBasisMatrix.apply_same, zero_ne_one, and_true, not_false_eq_true,
         StdBasisMatrix.apply_of_ne, and_false, add_zero, sub_self, mul_zero]
-        sorry
+        repeat rw [Matrix.mul_add]; repeat rw [Matrix.add_mul]
+        simp only [Algebra.mul_smul_comm, mul_one, Fin.isValue, smul_stdBasisMatrix, smul_eq_mul,
+          Algebra.smul_mul_assoc, one_mul, ne_eq, one_ne_zero, not_false_eq_true,
+          StdBasisMatrix.mul_of_ne, StdBasisMatrix.mul_same, zero_add, zero_ne_one, add_zero,
+          add_apply, smul_apply, one_apply_eq, sub_apply, StdBasisMatrix.apply_same, and_true,
+          StdBasisMatrix.apply_of_ne, and_false, sub_self, mul_zero,
+          StdBasisMatrix.mul_left_apply_of_ne, StdBasisMatrix.mul_left_apply_same, one_apply_ne,
+          StdBasisMatrix.mul_right_apply_same, zero_mul, and_self, zero_sub, neg_mul, mul_neg,
+          StdBasisMatrix.mul_right_apply_of_ne, sub_zero]
+        repeat rw [Matrix.mul_sub]; repeat rw [Matrix.sub_mul]
+        simp only [mul_one, Fin.isValue, one_mul, StdBasisMatrix.mul_same, sub_apply, one_apply_eq,
+          StdBasisMatrix.apply_same, ne_eq, zero_ne_one, not_false_eq_true,
+          StdBasisMatrix.mul_of_ne, sub_zero, and_true, StdBasisMatrix.apply_of_ne, and_false,
+          sub_self, mul_zero, add_zero, one_ne_zero, zero_add, zero_sub, neg_apply, and_self,
+          mul_neg]; ring
+
 
   map_add' x y := by
     ext i j; fin_cases i
