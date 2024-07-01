@@ -427,16 +427,14 @@ lemma inv_eqv (A B: CSA K) (hAB : IsBrauerEquivalent A B):
     IsBrauerEquivalent (inv (K := K) A) (inv (K := K) B) := by
   unfold inv
   obtain ⟨n, m, hn, hm, iso⟩ := hAB
-  have e1: Matrix (Fin n) (Fin n) Aᵐᵒᵖ ≃ₐ[K] (Matrix (Fin n) (Fin n) A)ᵐᵒᵖ := by sorry
-  have e2: Matrix (Fin m) (Fin m) Bᵐᵒᵖ ≃ₐ[K] (Matrix (Fin m) (Fin m) B)ᵐᵒᵖ := by sorry
-  exact ⟨⟨n, m, hn, hm, e1.trans $ (AlgEquiv.op iso).trans e2.symm⟩⟩
+  exact ⟨⟨n, m, hn, hm, (Matrix.matrixEquivMatrixMop_algebra _ _ _).trans 
+    $ (AlgEquiv.op iso).trans (Matrix.matrixEquivMatrixMop_algebra _ _ _).symm⟩⟩
 
 instance Inv: Inv (BrGroup (K := K)) := ⟨Quotient.lift (fun A ↦ Quotient.mk (CSA_Setoid) $ inv A)
 (by
   intro A B hAB
   change IsBrauerEquivalent _ _ at hAB
   simp only [Quotient.eq]; change IsBrauerEquivalent _ _
-  -- change IsBrauerEquivalent _ _
   exact inv_eqv (K := K) A B hAB)⟩
 
 theorem mul_left_inv' (A : BrGroup (K := K)) : A⁻¹ * A = 1 := by
