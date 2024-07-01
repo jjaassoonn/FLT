@@ -1,7 +1,6 @@
 import Mathlib.Data.Matrix.Basic
 namespace Matrix
 
-open scoped Classical
 open BigOperators
 
 variable  (I J K L R : Type*)
@@ -59,6 +58,7 @@ end Semiring
 section Algebra
 
 variable (K : Type*) [CommSemiring K] [Semiring R] [Fintype I] [Fintype J][Algebra K R]
+  [DecidableEq I] [DecidableEq J]
 
 def comp_algHom : Matrix I I (Matrix J J R) ≃ₐ[K] Matrix (I × J) (I × J) R :=
 { Matrix.comp_ringHom I J R with
@@ -73,8 +73,7 @@ def comp_algHom : Matrix I I (Matrix J J R) ≃ₐ[K] Matrix (I × J) (I × J) R
       simp only [hii, ↓reduceIte, diagonal_one, smul_apply, Prod.mk.injEq, true_and]
       if hjj : j1 = j2 then simp [hjj] else
         simp only [ne_eq, hjj, not_false_eq_true, one_apply_ne, smul_zero, ↓reduceIte]
-    else
-    simp only [hii, ↓reduceIte, zero_apply, Prod.mk.injEq]; tauto
+    else simp only [hii, ↓reduceIte, zero_apply, Prod.mk.injEq]; tauto
 }
 
 def swap_algHom : Matrix (I × J) (I × J) R ≃ₐ[K] Matrix (J × I) (J × I) R :=
@@ -82,16 +81,31 @@ def swap_algHom : Matrix (I × J) (I × J) R ≃ₐ[K] Matrix (J × I) (J × I) 
   commutes' := fun c ↦ by
     ext ⟨i1, j1⟩ ⟨i2, j2⟩
     simp only [swap_ringHom, swap_addHom, swap, AddEquiv.toEquiv_eq_coe, RingEquiv.toEquiv_eq_coe,
-      Equiv.toFun_as_coe, EquivLike.coe_coe, RingEquiv.coe_mk, AddEquiv.coe_mk, Equiv.coe_fn_mk]
-    simp only [algebraMap_eq_diagonal]; rw [Pi.algebraMap_def, Pi.algebraMap_def]
-    rw [@Algebra.algebraMap_eq_smul_one']
-    rw [@diagonal_apply, @diagonal_apply]
+      Equiv.toFun_as_coe, EquivLike.coe_coe, RingEquiv.coe_mk, AddEquiv.coe_mk, Equiv.coe_fn_mk,
+      algebraMap_eq_diagonal]; rw [Pi.algebraMap_def, Pi.algebraMap_def,
+      @Algebra.algebraMap_eq_smul_one', @diagonal_apply, @diagonal_apply]
     if hii: i1 = i2 then
       simp only [hii, ↓reduceIte, diagonal_one, smul_apply, Prod.mk.injEq, true_and]
-      if hjj : j1 = j2 then simp [hjj] else
+      if hjj : j1 = j2 then simp only [hjj, and_self, ↓reduceIte] else
         simp only [ne_eq, hjj, not_false_eq_true, one_apply_ne, smul_zero, ↓reduceIte]; tauto
     else simp only [Prod.mk.injEq, hii, and_false, ↓reduceIte, false_and]
 }
+
+open BigOperators Matrix MulOpposite in
+def matrixEquivMatrixMop_algebra (n : ℕ):
+    Matrix (Fin n) (Fin n) Rᵐᵒᵖ ≃ₐ[K] (Matrix (Fin n) (Fin n) R)ᵐᵒᵖ where
+  toFun := fun M => MulOpposite.op (M.transpose.map (fun d => MulOpposite.unop d))
+  invFun := fun M => (MulOpposite.unop M).transpose.map (fun d => MulOpposite.op d)
+  left_inv a := by aesop
+  right_inv a := by aesop
+  map_mul' x y := unop_injective $ by ext; simp [transpose_map, transpose_apply, mul_apply]
+  map_add' x y := by aesop
+  commutes' k := by
+    simp only [algebraMap_apply, op_inj]; ext i j
+    simp only [map_apply, transpose_apply, algebraMap_matrix_apply]
+    if h : i = j then simp only [h, ↓reduceIte, algebraMap_apply, unop_op]
+    else simp only [algebraMap_apply, h, ↓reduceIte, unop_eq_zero_iff, ite_eq_right_iff,
+      op_eq_zero_iff]; tauto
 
 end Algebra
 
