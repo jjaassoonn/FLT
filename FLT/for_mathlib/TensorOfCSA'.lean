@@ -466,11 +466,6 @@ lemma Alg_closed_equiv_one [IsAlgClosed K]: ∀(A : CSA K), IsBrauerEquivalent A
   exact ⟨⟨1, n, one_ne_zero, hn, dim_one_iso A|>.trans iso⟩⟩
 
 lemma Alg_closed_eq_one [IsAlgClosed K]: ∀(A : BrGroup (K := K)), A = 1 := by
-  intro A
-  suffices IsBrauerEquivalent _ _ from Quotient.out_equiv_out.mp this
-  have : @Quotient.out (CSA K) CSA_Setoid 1 = one_in' := by sorry
-  rw [this]; exact Alg_closed_equiv_one _
-lemma Alg_closed_eq_one [IsAlgClosed K]: ∀(A : BrGroup (K := K)), A = 1 := by
   intro A ; induction' A using Quotient.inductionOn' with A
   change _ = Quotient.mk'' one_in' ; apply Quotient.sound
   change IsBrauerEquivalent _ _; exact Alg_closed_equiv_one A
@@ -487,26 +482,9 @@ end BrauerGroup
 
 namespace BrauerGroupHom
 open BrauerGroup
-variable {E : Type u} [Field E] (f : K →+* E)
+variable {E : Type u} [Field E] [Algebra K E]
 
-instance is_alg : Algebra K E where
-  smul r x := (f r) * x
-  toFun := f
-  map_one' := f.map_one
-  map_mul' := f.map_mul
-  map_zero' := f.map_zero
-  map_add' := f.map_add
-  commutes' _ _ := mul_comm _ _
-  smul_def' _ _ := rfl
-
-variable (A' B' : Type*) [Ring A'] [Ring B'] [Algebra E A']
-  [Algebra E B'] [Algebra K A'] [Algebra K B']
-
-def is_alg' : Algebra K A' where
-  smul r x := (f r) • x
-  toFun := RingHom.comp (Algebra.ofId E A') f
-variable (A' B' : Type*) [Ring A'] [Ring B'] [Algebra E A']
-  [Algebra E B']
+variable (A' B' : Type*) [Ring A'] [Ring B'] [Algebra E A'] [Algebra E B']
 
 def restrict (K E : Type u) [Field K] [Field E] [Algebra K E] (A' : Type*)
     [Ring A'] [Algebra E A'] := A'
@@ -527,7 +505,6 @@ instance is_alg' : Algebra K (restrict K E A') where
     simp only [RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
     unfold restrict; exact Algebra.smul_def _ _
 
-
 def iso_to_iso (h : A' ≃ₐ[E] B') : (restrict K E A') ≃ₐ[K] (restrict K E B') where
   toFun := h.toAlgHom
   invFun := h.symm.toAlgHom
@@ -537,40 +514,27 @@ def iso_to_iso (h : A' ≃ₐ[E] B') : (restrict K E A') ≃ₐ[K] (restrict K E
   map_add' := map_add _
   commutes' r := by
     simp only [AlgEquiv.toAlgHom_eq_coe, AlgHom.coe_coe];
-    erw [(@AlgHom.map_algebraMap (R := K) (S := E) _ _ _ _ _ _ (is_alg f) _ _
-      _ _ _ _ h.toAlgHom r)]
+    unfold restrict; exact h.commutes _
 
+def rid_to_K_equiv : E ⊗[E] E ≃ₐ[K] E where
+  toFun := (Algebra.TensorProduct.rid E E E)
+  invFun := (Algebra.TensorProduct.rid E E E).symm
+  left_inv := AlgEquiv.leftInverse_symm (Algebra.TensorProduct.rid E E E)
+  right_inv := AlgEquiv.rightInverse_symm (Algebra.TensorProduct.rid E E E)
+  map_mul' := by simp only [map_mul, implies_true]
+  map_add' := by simp only [map_add, implies_true]
+  commutes' := by simp only [Algebra.TensorProduct.algebraMap_apply, Algebra.TensorProduct.rid_tmul,
+    smul_eq_mul, _root_.one_mul, implies_true]
 
--- lemma huarongdao2 : A' ⊗[E]  ≃ₐ[K] A' ⊗[E] E ⊗[E] B' := by sorry
-
-
--- abbrev changeBase : (CSA K) → (CSA E) :=
---   fun A => {
---     carrier := E ⊗[K] A
---     is_central_simple := IsCentralSimple.baseChange _ _ _
---     fin_dim := Module.Finite.base_change _ _ _
---   }
-
--- abbrev changeBase' : (CSA K) → (BrGroup (K := E)) :=
---   fun A => Quotient.mk (CSA_Setoid (K := E)) (changeBase E A)
-
--- lemma lift_aux : ∀(A B : CSA K), (IsBrauerEquivalent A B → changeBase' E A = changeBase' E B) := by
---   rintro A B ⟨n, m, hn, hm, iso⟩
---   simp only [Quotient.eq, changeBase]
---   change IsBrauerEquivalent _ _
---   have e1 :=
---     Algebra.TensorProduct.congr (AlgEquiv.refl (R := E) (A₁ := E))
---     (matrixEquivTensor K _ (Fin n)).symm|>.trans $ Algebra.TensorProduct.congr
---     (AlgEquiv.refl (R := E) (A₁ := E)) iso
---   have e2 := Algebra.TensorProduct.assoc K E A (Matrix (Fin n) (Fin n) K)
---   have e3 : (E ⊗[K] A) ⊗[K] Matrix (Fin n) (Fin n) K ≃ₐ[E]
---       E ⊗[K] A ⊗[K] Matrix (Fin n) (Fin n) K := by sorry
-
-
---   sorry
-
--- abbrev Change_GroupHom : (BrGroup (K := K)) → (BrGroup (K := E)) :=
---   Quotient.lift (changeBase' E) $ lift_aux E
+set_option maxHeartbeats 800000 in
+def huarongdao2 : E ⊗[K] (restrict K E A') ⊗[K] (restrict K E B') ≃ₐ[K]
+    (E ⊗[K] (restrict K E A')) ⊗[E] (E ⊗[K] restrict K E B') := by
+  -- unfold restrict
+  refine Algebra.TensorProduct.assoc _ _ _ _|>.symm.trans $ Algebra.TensorProduct.congr
+    (Algebra.TensorProduct.comm _ _ _) AlgEquiv.refl|>.trans ?_
+  have e1 := Algebra.TensorProduct.congr (R := K) (S := K)
+    (AlgEquiv.refl (A₁ := (restrict K E A'))) $ (rid_to_K_equiv (K := K) (E := E)).symm
+  refine Algebra.TensorProduct.congr e1 AlgEquiv.refl|>.trans ?_
 
 abbrev BaseChange : BrGroup (K := K) →* BrGroup (K := E) where
   toFun := sorry
