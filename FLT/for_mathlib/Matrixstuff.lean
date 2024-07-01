@@ -1,7 +1,6 @@
 import Mathlib.Data.Matrix.Basic
 namespace Matrix
 
-open scoped Classical
 open BigOperators
 
 variable  (I J K L R : Type*)
@@ -36,7 +35,7 @@ def swap_addHom : Matrix (I × J) (K × L) R ≃+ Matrix (J × I) (L × K) R :=
 end AddCommMonoid
 
 section Semiring
-variable [Semiring R][Fintype I][Fintype J]
+variable [Semiring R][Fintype I][Fintype J] [DecidableEq I] [DecidableEq J]
 
 def comp_ringHom : Matrix I I (Matrix J J R) ≃+* Matrix (I × J) (I × J) R :=
 { Matrix.comp_addHom I I J J R with
@@ -58,7 +57,8 @@ end Semiring
 
 section Algebra
 
-variable (K : Type*) [CommSemiring K] [Semiring R] [Fintype I] [Fintype J][Algebra K R]
+variable (K : Type*) [CommSemiring K] [Semiring R] [Fintype I] [Fintype J] [Algebra K R]
+variable [DecidableEq I] [DecidableEq J]
 
 def comp_algHom : Matrix I I (Matrix J J R) ≃ₐ[K] Matrix (I × J) (I × J) R :=
 { Matrix.comp_ringHom I J R with

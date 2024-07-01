@@ -9,7 +9,8 @@ variable (K : Type u) [Field K]
 variable (A B : Type v)[Ring A][Ring B][Algebra K A][Algebra K B]
 
 open scoped TensorProduct BigOperators
-theorem tensor_CSA_is_CSA [Small.{v, u} K ](hA: IsCentralSimple K A) (hB: IsCentralSimple K B):
+
+instance tensor_CSA_is_CSA [Small.{v, u} K ] [hA: IsCentralSimple K A] [hB: IsCentralSimple K B] :
     IsCentralSimple K (A ⊗[K] B) where
    is_central := IsCentralSimple.TensorProduct.isCentral K A B hA.is_central hB.is_central
    is_simple := by haveI := hA.is_simple; exact IsCentralSimple.TensorProduct.simple K A B
@@ -101,11 +102,12 @@ def trans {A B C : CSA K} (hAB : IsBrauerEquivalent A B) (hBC : IsBrauerEquivale
     IsBrauerEquivalent A C := by
   obtain ⟨n, m, hn, hm, iso1⟩ := hAB
   obtain ⟨p, q, hp, hq, iso2⟩ := hBC
-  let e1 := matrix_eqv' _ _ _ |>.symm.trans $ Matrix.comp_algHom _ _ _ _|>.symm.trans $
-    iso1.mapMatrix (m := Fin p)|>.trans $ Matrix.comp_algHom _ _ _ _|>.trans $
-    Matrix.swap_algHom _ _ _ _ |>.trans $ Matrix.comp_algHom _ _ _ _|>.symm.trans $
-    iso2.mapMatrix.trans $ Matrix.comp_algHom _ _ _ _|>.trans $ matrix_eqv' _ _ _
-  exact ⟨⟨_, _, Nat.mul_ne_zero hp hn, Nat.mul_ne_zero hm hq, e1⟩⟩
+  exact ⟨⟨_, _, Nat.mul_ne_zero hp hn, Nat.mul_ne_zero hm hq,
+    matrix_eqv' _ _ _ |>.symm.trans $ Matrix.comp_algHom _ _ _ _|>.symm.trans $
+      iso1.mapMatrix (m := Fin p)|>.trans $ Matrix.comp_algHom _ _ _ _|>.trans $
+      Matrix.swap_algHom _ _ _ _ |>.trans $ Matrix.comp_algHom _ _ _ _|>.symm.trans $
+      iso2.mapMatrix.trans $ Matrix.comp_algHom _ _ _ _|>.trans $ matrix_eqv' _ _ _⟩⟩
+
 
 lemma iso_to_eqv (A B : CSA K) (h : A ≃ₐ[K] B) : IsBrauerEquivalent A B := by
   exact ⟨⟨_, _, one_ne_zero, one_ne_zero, h.mapMatrix (m := (Fin 1))⟩⟩
@@ -160,8 +162,6 @@ end IsBrauerEquivalent
 
 namespace BrauerGroup
 
-open scoped Classical
-
 def CSA_Setoid : Setoid (CSA K) where
   r := IsBrauerEquivalent
   iseqv := IsBrauerEquivalent.Braur_is_eqv
@@ -199,14 +199,13 @@ instance one_mul_in (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
   is_central_simple := by
     haveI: Nonempty (Fin n) := Fin.pos_iff_nonempty.mp (by omega)
     exact tensor_CSA_is_CSA K A (Matrix (Fin n) (Fin n) K)
-      A.is_central_simple (MatrixRing.isCentralSimple K (Fin n))
+      -- (MatrixRing.isCentralSimple K (Fin n))
 
 instance mul_one_in (n : ℕ) (hn : n ≠ 0) (A : CSA K) : CSA K where
   carrier := (Matrix (Fin n) (Fin n) K) ⊗[K] A
   is_central_simple := by
     haveI: Nonempty (Fin n) := Fin.pos_iff_nonempty.mp (by omega)
     exact tensor_CSA_is_CSA K (Matrix (Fin n) (Fin n) K) A
-      (MatrixRing.isCentralSimple K (Fin n)) A.is_central_simple
 
 def eqv_in (A : CSA K) (A' : Type*) [Ring A'] [Algebra K A'] (e : A ≃ₐ[K] A'): CSA K where
   carrier := A'
@@ -278,6 +277,7 @@ theorem eqv_mat (A : CSA K) (n : ℕ) (hn : n ≠ 0): IsBrauerEquivalent A (matr
 lemma choose_span_of_Tensor (A B : Type*) [Ring A] [Algebra K A] [Ring B] [Algebra K B]
     (x : A ⊗[K] B): ∃(I : Finset (A ⊗[K] B)) (x1 : (A ⊗[K] B) → A) (x2 : (A ⊗[K] B) → B),
     x = ∑ i in I, x1 i ⊗ₜ[K] x2 i := by
+  classical
   have mem1 : x ∈ (⊤ : Submodule K (A ⊗[K] B)) := ⟨⟩
   rw [← TensorProduct.span_tmul_eq_top, mem_span_set] at mem1
   obtain ⟨r, hr, (eq1 : ∑ i in r.support, (_ • _) = _)⟩ := mem1
@@ -528,15 +528,15 @@ lemma Alg_closed_equiv_one [IsAlgClosed K]: ∀(A : CSA K), IsBrauerEquivalent A
   obtain ⟨n, hn, ⟨iso⟩⟩ := simple_eq_matrix_algClosed K A
   exact ⟨⟨1, n, one_ne_zero, hn, dim_one_iso A|>.trans iso⟩⟩
 
-lemma Alg_closed_eq_one [IsAlgClosed K]: ∀(A : BrGroup (K := K)), A = 1 := by 
-  intro A 
-  suffices IsBrauerEquivalent _ _ from Quotient.out_equiv_out.mp this 
-  have : @Quotient.out (CSA K) CSA_Setoid 1 = one_in' := by sorry 
+lemma Alg_closed_eq_one [IsAlgClosed K]: ∀(A : BrGroup (K := K)), A = 1 := by
+  intro A
+  suffices IsBrauerEquivalent _ _ from Quotient.out_equiv_out.mp this
+  have : @Quotient.out (CSA K) CSA_Setoid 1 = one_in' := by sorry
   rw [this]; exact Alg_closed_equiv_one _
 
 theorem Alg_closed_Brauer_trivial [IsAlgClosed K]: (⊤ : Subgroup BrGroup) =
     (⊥ : Subgroup $ BrGroup (K := K)) :=
-  Subgroup.ext fun _ => ⟨fun _ ↦ Alg_closed_eq_one _, fun _ ↦ ⟨⟩⟩ 
+  Subgroup.ext fun _ => ⟨fun _ ↦ Alg_closed_eq_one _, fun _ ↦ ⟨⟩⟩
 
 
 end BrauerGroup
@@ -548,14 +548,14 @@ variable {E : Type u} [Field E] (f : K →+* E)
 instance is_alg : Algebra K E where
   smul r x := (f r) * x
   toFun := f
-  map_one' := f.map_one 
+  map_one' := f.map_one
   map_mul' := f.map_mul
   map_zero' := f.map_zero
   map_add' := f.map_add
   commutes' _ _ := mul_comm _ _
   smul_def' _ _ := rfl
 
-variable (A' B' : Type*) [Ring A'] [Ring B'] [Algebra E A'] 
+variable (A' B' : Type*) [Ring A'] [Ring B'] [Algebra E A']
   [Algebra E B'] [Algebra K A'] [Algebra K B']
 
 def is_alg' : Algebra K A' where
@@ -581,41 +581,41 @@ def iso_to_iso (h : A' ≃ₐ[E] B') : A' ≃ₐ[K] B' where
   right_inv := AlgEquiv.rightInverse_symm h
   map_mul' := map_mul _
   map_add' := map_add _
-  commutes' r := by 
+  commutes' r := by
     simp only [AlgEquiv.toAlgHom_eq_coe, AlgHom.coe_coe];
-    erw [(@AlgHom.map_algebraMap (R := K) (S := E) _ _ _ _ _ _ (is_alg f) _ _ 
+    erw [(@AlgHom.map_algebraMap (R := K) (S := E) _ _ _ _ _ _ (is_alg f) _ _
       _ _ _ _ h.toAlgHom r)]
-    
+
 
 -- lemma huarongdao2 : A' ⊗[E]  ≃ₐ[K] A' ⊗[E] E ⊗[E] B' := by sorry
-  
 
--- abbrev changeBase : (CSA K) → (CSA E) := 
+
+-- abbrev changeBase : (CSA K) → (CSA E) :=
 --   fun A => {
 --     carrier := E ⊗[K] A
 --     is_central_simple := IsCentralSimple.baseChange _ _ _
 --     fin_dim := Module.Finite.base_change _ _ _
 --   }
 
--- abbrev changeBase' : (CSA K) → (BrGroup (K := E)) := 
+-- abbrev changeBase' : (CSA K) → (BrGroup (K := E)) :=
 --   fun A => Quotient.mk (CSA_Setoid (K := E)) (changeBase E A)
 
 -- lemma lift_aux : ∀(A B : CSA K), (IsBrauerEquivalent A B → changeBase' E A = changeBase' E B) := by
 --   rintro A B ⟨n, m, hn, hm, iso⟩
 --   simp only [Quotient.eq, changeBase]
---   change IsBrauerEquivalent _ _ 
---   have e1 := 
---     Algebra.TensorProduct.congr (AlgEquiv.refl (R := E) (A₁ := E)) 
---     (matrixEquivTensor K _ (Fin n)).symm|>.trans $ Algebra.TensorProduct.congr 
---     (AlgEquiv.refl (R := E) (A₁ := E)) iso 
---   have e2 := Algebra.TensorProduct.assoc K E A (Matrix (Fin n) (Fin n) K) 
---   have e3 : (E ⊗[K] A) ⊗[K] Matrix (Fin n) (Fin n) K ≃ₐ[E] 
+--   change IsBrauerEquivalent _ _
+--   have e1 :=
+--     Algebra.TensorProduct.congr (AlgEquiv.refl (R := E) (A₁ := E))
+--     (matrixEquivTensor K _ (Fin n)).symm|>.trans $ Algebra.TensorProduct.congr
+--     (AlgEquiv.refl (R := E) (A₁ := E)) iso
+--   have e2 := Algebra.TensorProduct.assoc K E A (Matrix (Fin n) (Fin n) K)
+--   have e3 : (E ⊗[K] A) ⊗[K] Matrix (Fin n) (Fin n) K ≃ₐ[E]
 --       E ⊗[K] A ⊗[K] Matrix (Fin n) (Fin n) K := by sorry
-  
-  
+
+
 --   sorry
 
--- abbrev Change_GroupHom : (BrGroup (K := K)) → (BrGroup (K := E)) := 
+-- abbrev Change_GroupHom : (BrGroup (K := K)) → (BrGroup (K := E)) :=
 --   Quotient.lift (changeBase' E) $ lift_aux E
 
 abbrev BaseChange : BrGroup (K := K) →* BrGroup (K := E) where
