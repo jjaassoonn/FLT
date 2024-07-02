@@ -164,8 +164,8 @@ theorem sub_im (z w : K√d) : (z - w).im = z.im - w.im := by
   exact Eq.symm (Mathlib.Tactic.Abel.unfold_sub z.im w.im (z - w).im rfl)
 
 instance addGroupWithOne : AddGroupWithOne (K√d) where
-  intCast z := ⟨z, 0⟩ 
-  natCast n := ⟨n, 0⟩ 
+  intCast z := ⟨z, 0⟩
+  natCast n := ⟨n, 0⟩
   add := (· + ·)
   add_assoc := add_assoc
   zero := 0
@@ -176,7 +176,7 @@ instance addGroupWithOne : AddGroupWithOne (K√d) where
   nsmul_succ _ _ := rfl
   natCast_zero := by aesop
   natCast_succ n := by aesop
-  neg := -(·) 
+  neg := -(·)
   sub := (· - ·)
   sub_eq_add_neg _ _ := rfl
   zsmul z x := z • x
@@ -185,7 +185,7 @@ instance addGroupWithOne : AddGroupWithOne (K√d) where
   zsmul_neg' := fun _ _ ↦ rfl
   add_left_neg := fun _ ↦ neg_add_self _
   intCast_ofNat := fun _ ↦ by simp only [Int.cast_natCast]; rfl
-  intCast_negSucc := fun n ↦ by 
+  intCast_negSucc := fun n ↦ by
     simp only [Int.cast_negSucc, Nat.cast_add, Nat.cast_one, neg_add_rev, Pi.neg_apply]
     ext <;> ring_nf <;> simp only [neg_re, neg_im, zero_eq_neg]
     · rw [neg_sub_left, add_comm, Nat.one_add, ← Nat.cast_one, ← Nat.cast_add, Nat.one_add]; congr
@@ -247,7 +247,7 @@ instance : Algebra K (K√d) :=
   smul_def' := fun _ _ ↦ by ext <;> simp <;> rfl
 }
 
--- instance : Field (K√d) := 
+-- instance : Field (K√d) :=
 -- {
 --   inv := fun z => ⟨z.re / (z.re ^ 2 - d * z.im ^ 2), -z.im / (z.re ^ 2 - d * z.im ^ 2)⟩,
 --   div := fun z w => z * w⁻¹,
@@ -393,7 +393,7 @@ def normMonoidHom : K√d →* K where
 theorem norm_eq_mul_conj (n : K√d) : (norm n : K) = n * star n := by
   ext <;> simp [norm, star, mul_comm, sub_eq_add_neg]
 
-def inv_of_this: K√d → K√d := fun z => 
+def inv_of_this: K√d → K√d := fun z =>
   ⟨z.re / (z.re ^ 2 - d * z.im ^ 2), -z.im / (z.re ^ 2 - d * z.im ^ 2)⟩
 
 instance : Inv (K√d) where
@@ -402,13 +402,27 @@ instance : Inv (K√d) where
 instance : Div (K√d) where
   div x y := x * y⁻¹
 
+lemma not_square_to_norm_not_zero (hd : ¬(IsSquare d)) : ∀(x : K√d), x ≠ 0 → x.norm ≠ 0 := by
+  intro x hx hnx
+  unfold norm at hnx
+  if hxi : x.im = 0 then 
+    simp only [hxi, mul_zero, sub_zero, mul_eq_zero, or_self] at hnx
+    apply hx ; exact Ksqrtd.ext _ _ hnx hxi
+  else
+    rw [← pow_two, mul_assoc, ← pow_two, sub_eq_zero] at hnx
+    apply_fun fun m => m/(x.im ^ 2) at hnx
+    rw [← mul_div, div_self (pow_ne_zero 2 hxi), mul_one] at hnx
+    have sq_eq : x.re ^ 2 / x.im ^ 2 = (x.re / x.im) ^ 2 := by ring
+    rw [sq_eq] at hnx; symm at hnx; rw [pow_two] at hnx
+    have : IsSquare d := ⟨(x.re /x.im), hnx⟩ ; tauto
 
-instance : DivisionRing (K√d) where
+
+instance DivisionRing (hd : ¬(IsSquare d)): DivisionRing (K√d) where
   zero_add := zero_add
   add_zero := add_zero
   nsmul := fun n x ↦ n • x
   add_comm := add_comm
-  left_distrib := by exact mul_add 
+  left_distrib := by exact mul_add
   right_distrib := by exact add_mul
   zero_mul := zero_mul
   mul_zero := mul_zero
@@ -422,29 +436,32 @@ instance : DivisionRing (K√d) where
   intCast_ofNat := fun _ ↦ Int.cast_natCast _
   intCast_negSucc := fun _ ↦ Int.cast_negSucc _
   div_eq_mul_inv := fun _ _ ↦ rfl
-  mul_inv_cancel := fun a ha ↦ by 
+  mul_inv_cancel := fun a ha ↦ by
     simp only [nsmul_eq_mul, inv_of_this]; ext
-    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_re, one_re]; 
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_re, one_re];
       ring_nf; rw [← sub_mul, mul_inv_cancel]
-      rw [pow_two, pow_two, ← mul_assoc, ← norm_def]; sorry
-    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_im, one_im]; sorry
-  inv_zero := by 
+      rw [pow_two, pow_two, ← mul_assoc, ← norm_def]; 
+      exact not_square_to_norm_not_zero hd a ha
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_im, one_im]; ring
+  inv_zero := by
     change inv_of_this 0 = 0; simp only [inv_of_this, zero_re, ne_eq, OfNat.ofNat_ne_zero,
       not_false_eq_true, zero_pow, zero_im, mul_zero, sub_self, div_zero, neg_zero]; rfl
   nnqsmul := _
   qsmul := fun q x ↦ ⟨q * x.re, q * x.im⟩
-  qsmul_def := fun q x ↦ by 
+  qsmul_def := fun q x ↦ by
     ext <;> simp only [nsmul_eq_mul, mul_re, mul_im]
     · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
       simp only [mul_zero, zero_mul, add_zero]
     · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
       simp only [zero_mul, add_zero]
 
--- instance : Field (K√d) := by
--- {
---   _ := Ksqrtd.DivisionRing,
---   _ := Ksqrtd.commRing,
--- } 
+instance (hd : ¬(IsSquare d)) : Field (K√d) :=
+{
+  mul_inv_cancel := Ksqrtd.DivisionRing hd|>.mul_inv_cancel 
+  inv_zero := Ksqrtd.DivisionRing hd|>.inv_zero
+  nnqsmul := _ 
+  qsmul := _
+}
 
 end Norm
 
