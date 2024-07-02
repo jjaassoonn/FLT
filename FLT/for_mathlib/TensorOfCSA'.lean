@@ -615,6 +615,35 @@ instance is_alg' : Algebra K (restrict K E A') where
     simp only [RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
     unfold restrict; exact Algebra.smul_def _ _
 
+instance : Algebra E (restrict K E A') := inferInstanceAs $ Algebra E A'
+
+lemma restrict_algebraMap_eq :
+  (algebraMap K $ restrict K E A') =
+  (algebraMap E A').comp (algebraMap K E) := rfl
+
+
+instance : IsScalarTower K E (restrict K E A') where
+  smul_assoc k e a := by
+    rw [Algebra.smul_def, Algebra.smul_def, Algebra.smul_def,
+     restrict_algebraMap_eq, Algebra.smul_def]
+    rw [show algebraMap E (restrict K E A') = algebraMap E A' from rfl]
+    erw [RingHom.comp_apply]
+    rw [map_mul, _root_.mul_assoc]
+    rfl
+
+variable {A' B'} in
+def restrictHom (f : A' →ₐ[E] B') : restrict K E A' →ₐ[K] restrict K E B' where
+  __ := f
+  commutes' k := by
+    simp only [AlgHom.toRingHom_eq_coe, RingHom.toMonoidHom_eq_coe, OneHom.toFun_eq_coe,
+      MonoidHom.toOneHom_coe, MonoidHom.coe_coe]
+    rw [restrict_algebraMap_eq, restrict_algebraMap_eq]
+    change f (algebraMap E A' _) = algebraMap E B' _
+    rw [f.commutes]
+
+lemma restrictHom_apply (f : A' →ₐ[E] B') (a : A') :
+    restrictHom (K := K) f a = f a := rfl
+
 def iso_to_iso (h : A' ≃ₐ[E] B') : (restrict K E A') ≃ₐ[K] (restrict K E B') where
   toFun := h.toAlgHom
   invFun := h.symm.toAlgHom
@@ -697,12 +726,54 @@ def huarongdao1 : (E ⊗[K] restrict K E A') ≃ₐ[K] restrict K E A' :=
       exact Algebra.commutes (R := E) (A := A') e a
   AlgEquiv.ofBijective L ⟨sorry /-again; by degree concern-/, fun a => ⟨1 ⊗ₜ a, by simp [L]⟩⟩
 
+def huarongdao2Aux0 :
+    (E ⊗[K] restrict K E A') ⊗[E] E ⊗[K] restrict K E B' →+
+    (E ⊗[K] restrict K E A') ⊗[K] E ⊗[K] restrict K E B' :=
+  TensorProduct.liftAddHom
+    { toFun := fun x =>
+      { toFun := fun y => x ⊗ₜ y
+        map_zero' := sorry
+        map_add' := sorry }
+      map_zero' := sorry
+      map_add' := sorry }
+    sorry
+
+def huarongdao2Aux1 :
+    (E ⊗[K] restrict K E A') ⊗[E] E ⊗[K] restrict K E B' →ₐ[K]
+    (E ⊗[K] restrict K E A') ⊗[K] E ⊗[K] restrict K E B' where
+  toFun := huarongdao2Aux0 A' B'
+  map_one' := sorry
+  map_mul' := sorry
+  map_zero' := sorry
+  map_add' := sorry
+  commutes' := sorry
+
+set_option synthInstance.maxHeartbeats 40000 in
+def huarongdao2 :
+    (E ⊗[K] restrict K E A') ⊗[E] E ⊗[K] restrict K E B' ≃ₐ[K]
+    (E ⊗[K] restrict K E A') ⊗[K] E ⊗[K] restrict K E B' :=
+  AlgEquiv.ofBijective (huarongdao2Aux1 A' B')
+    ⟨sorry /-Again by dimension? But I am not sure how to calculate the `E`-dim of `E ⊗[K] restrict A`-/, fun z => by
+      induction' z using TensorProduct.induction_on with x y x y ihx ihy
+      · use 0; rw [_root_.map_zero]
+      · use x ⊗ₜ y
+        dsimp [huarongdao2Aux1]
+        erw [TensorProduct.liftAddHom_tmul]
+        simp only [AddMonoidHom.coe_mk, ZeroHom.coe_mk]
+      · rcases ihx with ⟨x, rfl⟩
+        rcases ihy with ⟨y, rfl⟩
+        use x + y
+        rw [(huarongdao2Aux1 (K := K) (E := E) A' B').map_add]⟩
+
 set_option maxHeartbeats 800000 in
-def huarongdao2 : E ⊗[K] (restrict K E A') ⊗[K] (restrict K E B') ≃ₐ[K]
+def huarongdao3 : E ⊗[K] (restrict K E A') ⊗[K] (restrict K E B') ≃ₐ[K]
     (E ⊗[K] (restrict K E A')) ⊗[E] (E ⊗[K] restrict K E B') := by
   refine Algebra.TensorProduct.assoc K E (restrict K E A') (restrict K E B') |>.symm.trans $
      Algebra.TensorProduct.congr (huarongdao1 A') AlgEquiv.refl |>.trans ?_
-  sorry
+  refine huarongdao0 _ _ |>.trans $ AlgEquiv.symm ?_
+  refine huarongdao2 _ _ |>.trans $
+    Algebra.TensorProduct.congr (huarongdao1 A') (huarongdao1 B') |>.trans $
+    huarongdao0 A' B'
 
 abbrev BaseChange : BrGroup (K := K) →* BrGroup (K := E) where
   toFun := sorry
