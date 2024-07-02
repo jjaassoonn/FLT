@@ -164,11 +164,33 @@ theorem sub_re (z w : K√d) : (z - w).re = z.re - w.re := by
 theorem sub_im (z w : K√d) : (z - w).im = z.im - w.im := by
   exact Eq.symm (Mathlib.Tactic.Abel.unfold_sub z.im w.im (z - w).im rfl)
 
-instance addGroupWithOne : AddGroupWithOne (K√d) :=
-  { Ksqrtd.addCommGroup with
-    natCast := fun n => ofField n,
-    intCast := fun n => ofField n,
-    one := 1 }
+instance addGroupWithOne : AddGroupWithOne (K√d) where
+  intCast z := ⟨z, 0⟩ 
+  natCast n := ⟨n, 0⟩ 
+  add := (· + ·)
+  add_assoc := add_assoc
+  zero := 0
+  zero_add := zero_add
+  add_zero := add_zero
+  nsmul n x := n • x
+  nsmul_zero := by aesop
+  nsmul_succ _ _ := rfl
+  natCast_zero := by aesop
+  natCast_succ n := by aesop
+  neg := -(·) 
+  sub := (· - ·)
+  sub_eq_add_neg _ _ := rfl
+  zsmul z x := z • x
+  zsmul_zero' := fun _ ↦ rfl
+  zsmul_succ' := fun _ _ ↦ rfl
+  zsmul_neg' := fun _ _ ↦ rfl
+  add_left_neg := fun _ ↦ neg_add_self _
+  intCast_ofNat := fun _ ↦ by simp only [Int.cast_natCast]; rfl
+  intCast_negSucc := fun n ↦ by 
+    simp only [Int.cast_negSucc, Nat.cast_add, Nat.cast_one, neg_add_rev, Pi.neg_apply]
+    ext <;> ring_nf <;> simp only [neg_re, neg_im, zero_eq_neg]
+    · rw [neg_sub_left, add_comm, Nat.one_add, ← Nat.cast_one, ← Nat.cast_add, Nat.one_add]; congr
+    · rfl
 
 instance commRing : CommRing (K√d) := by
   refine
@@ -222,8 +244,8 @@ instance : Algebra K (K√d) :=
   map_zero' := by simp_all only; apply Eq.refl
   map_add' := by intro x y; simp
   map_mul' := by intro x y; simp_all only; ext <;> simp
-  commutes' := by sorry
-  smul_def' := by sorry
+  commutes' := fun _ _ ↦ mul_comm _ _
+  smul_def' := fun _ _ ↦ by ext <;> simp <;> rfl
 }
 
 -- instance : Field (K√d) := 
@@ -372,18 +394,19 @@ def normMonoidHom : K√d →* K where
 theorem norm_eq_mul_conj (n : K√d) : (norm n : K) = n * star n := by
   ext <;> simp [norm, star, mul_comm, sub_eq_add_neg]
 def inv_of_this: K√d → K√d := fun z => ⟨z.re / (z.re ^ 2 - d * z.im ^ 2), -z.im / (z.re ^ 2 - d * z.im ^ 2)⟩
-instance :DivisionRing (K√d) := 
-  { inv := inv_of_this,
-    div := fun z w => z * (inv_of_this w),
-    mul_inv_cancel := ?_
-    inv_zero := ?_
-    exists_pair_ne := ?_
-    nnqsmul := ?_
-    qsmul := ?_
-    -- has_div := ?_
-    div_eq_mul_inv := ?_ } 
-instance : Field (K√d) := by
-  rw?
+
+-- instance :DivisionRing (K√d) := 
+--   { inv := inv_of_this,
+--     div := fun z w => z * (inv_of_this w),
+--     mul_inv_cancel := ?_
+--     inv_zero := ?_
+--     exists_pair_ne := ?_
+--     nnqsmul := ?_
+--     qsmul := ?_
+--     -- has_div := ?_
+--     div_eq_mul_inv := ?_ } 
+-- instance : Field (K√d) := by
+--   rw?
 -- {
 --   _ := Ksqrtd.DivisionRing,
 --   _ := Ksqrtd.commRing,
