@@ -663,39 +663,19 @@ lemma Wedderburn_Artin_algebra_version
     rw [← Algebra.commutes, ← smul_eq_mul, ← e.map_smul]
     exact congr_arg e $ by ext; simp
 
-instance (M : Type*) [AddCommGroup M] [Module B M]  :
-  Algebra K (Module.End B M) where
-    smul := fun k x =>
-    { toFun := fun m => x $ (algebraMap K B k) • m
-      map_add' := fun m1 m2 => by simp
-      map_smul' := fun b m => by
-        simp only [LinearMapClass.map_smul, RingHom.id_apply]
-        rw [← MulAction.mul_smul, Algebra.commutes k b, MulAction.mul_smul] }
-    toFun k :=
-    { toFun := fun m => algebraMap K B k • m
-      map_add' := fun m1 m2 => by simp
-      map_smul' := fun m1 m2 => by
-        simp only [RingHom.id_apply]
-        rw [← MulAction.mul_smul, Algebra.commutes k m1, MulAction.mul_smul] }
-    map_one' := by simp only [_root_.map_one, one_smul]; rfl
-    map_mul' a b := by
-      ext m
-      simp only [_root_.map_mul, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.mul_apply,
-        LinearMapClass.map_smul]
-      rw [← MulAction.mul_smul, Algebra.commutes, MulAction.mul_smul]
-    map_zero' := by simp only [map_zero, zero_smul]; rfl
-    map_add' a b := by
-      ext m
-      simp only [map_add, add_smul, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.add_apply]
-    commutes' a x := by
-      ext m
-      simp only [RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk, LinearMap.mul_apply,
-        LinearMap.coe_mk, AddHom.coe_mk, LinearMapClass.map_smul]
-    smul_def' a x := by
-      ext m
-      change x _ = _
-      simp only [_root_.map_smul, RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk,
-        LinearMap.mul_apply, LinearMap.coe_mk, AddHom.coe_mk]
+instance (priority := high) (M : Type*) [AddCommGroup M] [Module B M]   :
+    Algebra K (Module.End B M) :=
+  letI : Module K M := Module.compHom M (algebraMap K B)
+  letI : SMulCommClass B K M :=
+  { smul_comm := fun b k m =>
+      show b • (algebraMap K B k) • m = _ by
+      rw [← MulAction.mul_smul, ← Algebra.commutes, MulAction.mul_smul]
+      rfl }
+  letI : IsScalarTower K B M :=
+  { smul_assoc := fun k b m => by
+      rw [Algebra.smul_def, MulAction.mul_smul]; rfl }
+
+  Module.End.instAlgebra K B M
 
 def test' (D : Type*) [DivisionRing D] [Algebra K D] (m : ℕ) (hm : m ≠ 0)
     (Wdb : B ≃ₐ[K] M[Fin m, D]) (M : Type*)

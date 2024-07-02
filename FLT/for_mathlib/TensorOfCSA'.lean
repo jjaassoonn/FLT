@@ -1,5 +1,6 @@
 import FLT.for_mathlib.IsCentralSimple
 import FLT.for_mathlib.Matrixstuff
+import Mathlib.LinearAlgebra.Matrix.ToLin
 
 
 suppress_compilation
@@ -9,6 +10,52 @@ variable (K : Type u) [Field K]
 variable (A B : Type v)[Ring A][Ring B][Algebra K A][Algebra K B]
 
 open scoped TensorProduct BigOperators
+
+-- attribute [-instance] LinearMap.module
+
+lemma bijective_of_dim_eq_of_isCentralSimple
+    [csa_source : IsCentralSimple K A]
+    [fin_source : FiniteDimensional K A]
+    [fin_target : FiniteDimensional K B]
+    (f : A →ₐ[K] B) (h : FiniteDimensional.finrank K A = FiniteDimensional.finrank K B) :
+    Function.Bijective f := by
+  obtain hA|hA := subsingleton_or_nontrivial A
+  · have eq1 : FiniteDimensional.finrank K A = 0 := by
+      rw [finrank_zero_iff_forall_zero]
+      intro x
+      apply Subsingleton.elim
+    rw [eq1] at h
+    replace h : Subsingleton B := by
+      constructor
+      symm at h
+      rw [finrank_zero_iff_forall_zero] at h
+      intro a b
+      rw [h a, h b]
+    rw [Function.bijective_iff_existsUnique]
+    intro b
+    refine ⟨0, Subsingleton.elim _ _, fun _ _ => Subsingleton.elim _ _⟩
+  · have := RingCon.IsSimpleOrder.iff_eq_zero_or_injective A |>.1 csa_source.2 f.toRingHom
+    rcases this with (H|H)
+    · have : (1 : A) ∈ RingCon.ker f.toRingHom := H ▸ ⟨⟩
+      simp only [AlgHom.toRingHom_eq_coe, RingCon.mem_ker, map_one] at this
+      have hmm : Nontrivial B := by
+        let e := LinearEquiv.ofFinrankEq _ _ h
+        exact Equiv.nontrivial e.symm.toEquiv
+
+      exact one_ne_zero this |>.elim
+    · refine ⟨H, ?_⟩
+      change Function.Surjective f.toLinearMap
+      have := f.toLinearMap.finrank_range_add_finrank_ker
+      rw [show FiniteDimensional.finrank K ↥(LinearMap.ker f.toLinearMap) = 0 by
+        rw [finrank_zero_iff_forall_zero]
+        rintro ⟨x, hx⟩
+        rw [LinearMap.ker_eq_bot (f := f.toLinearMap) |>.2 H] at hx
+        ext
+        exact hx, add_zero, h] at this
+      rw [← LinearMap.range_eq_top]
+
+      apply Submodule.eq_top_of_finrank_eq
+      exact this
 
 instance tensor_CSA_is_CSA [Small.{v, u} K ] [hA: IsCentralSimple K A] [hB: IsCentralSimple K B] :
     IsCentralSimple K (A ⊗[K] B) where
@@ -31,14 +78,77 @@ lemma CSA_op_is_CSA (hA: IsCentralSimple K A):
     exact ⟨k, MulOpposite.unop_inj.mp hk⟩
   is_simple := @op_simple A _ hA.is_simple
 
-def tensor_self_op (hA: IsCentralSimple K A) [FiniteDimensional K A]
-    (n : ℕ) (hn : n = FiniteDimensional.finrank K A):
-    A ⊗[K] Aᵐᵒᵖ ≃ₐ[K] (Matrix (Fin n) (Fin n) K) := sorry
+namespace tensor_self_op
 
-def tensor_op_self (hA: IsCentralSimple K A) [FiniteDimensional K A]
-    (n : ℕ) (hn : n = FiniteDimensional.finrank K A):
-    Aᵐᵒᵖ ⊗[K] A ≃ₐ[K] (Matrix (Fin n) (Fin n) K) :=
-  (Algebra.TensorProduct.comm _ _ _).trans $ tensor_self_op _ _ hA _ hn
+variable [hA: IsCentralSimple K A] [FiniteDimensional K A]
+
+instance st : IsScalarTower K K (Module.End K A) where
+  smul_assoc k₁ k₂ f := DFunLike.ext _ _ fun a => by
+    change (k₁ * k₂) • f a = k₁ • (k₂ • f a)
+    rw [mul_smul]
+
+def toEnd : A ⊗[K] Aᵐᵒᵖ →ₐ[K] Module.End K A :=
+  Algebra.TensorProduct.lift
+    { toFun := fun a =>
+        { toFun := fun x => a * x
+          map_add' := mul_add _
+          map_smul' := by simp }
+      map_one' := by aesop
+      map_mul' := by intros; ext; simp [mul_assoc]
+      map_zero' := by aesop
+      map_add' := by intros; ext; simp [add_mul]
+      commutes' := fun k => DFunLike.ext _ _ fun a => show (algebraMap K A) k * a = k • _ from
+        (Algebra.smul_def _ _).symm }
+    { toFun := fun a =>
+        { toFun := fun x => x * a.unop
+          map_add' := fun x y => by simp [add_mul]
+          map_smul' := by simp }
+      map_one' := by aesop
+      map_mul' := by intros; ext; simp [mul_assoc]
+      map_zero' := by aesop
+      map_add' := by intros; ext; simp [mul_add]
+      commutes' := fun k => DFunLike.ext _ _ fun a =>
+        show a * (algebraMap K A) k = k • _ by
+          rw [Algebra.smul_def, Algebra.commutes]
+          rfl }
+    fun a a' => show _ = _ from DFunLike.ext _ _ fun x => show a * (x * a'.unop) = a * x * a'.unop
+      from mul_assoc _ _ _ |>.symm
+
+instance : IsCentralSimple K Aᵐᵒᵖ := CSA_op_is_CSA K A inferInstance
+instance : FiniteDimensional K Aᵐᵒᵖ := LinearEquiv.finiteDimensional
+  (MulOpposite.opLinearEquiv K : A ≃ₗ[K] Aᵐᵒᵖ)
+
+instance fin_end : FiniteDimensional K (Module.End K A) :=
+  LinearMap.finiteDimensional
+
+-- #find Basis ?_
+lemma dim_eq :
+    FiniteDimensional.finrank K (A ⊗[K] Aᵐᵒᵖ) = FiniteDimensional.finrank K (Module.End K A) := by
+  rw [FiniteDimensional.finrank_tensorProduct]
+  rw [show FiniteDimensional.finrank K (Module.End K A) =
+    FiniteDimensional.finrank K
+      (Matrix (Fin $ FiniteDimensional.finrank K A) (Fin $ FiniteDimensional.finrank K A) K) from
+    (algEquivMatrix $ FiniteDimensional.finBasis _ _).toLinearEquiv.finrank_eq]
+  rw [FiniteDimensional.finrank_matrix, Fintype.card_fin]
+  rw [show FiniteDimensional.finrank K Aᵐᵒᵖ = FiniteDimensional.finrank K A from
+    (MulOpposite.opLinearEquiv K : A ≃ₗ[K] Aᵐᵒᵖ).symm.finrank_eq]
+
+def equivEnd [Small.{v, u} K] : A ⊗[K] Aᵐᵒᵖ ≃ₐ[K] Module.End K A :=
+  AlgEquiv.ofBijective (toEnd K A) $
+    bijective_of_dim_eq_of_isCentralSimple _ _ _ _ $ dim_eq K A
+
+end tensor_self_op
+
+open tensor_self_op in
+def tensor_self_op [Small.{v} K] [IsCentralSimple K A] [FiniteDimensional K A] :
+    A ⊗[K] Aᵐᵒᵖ ≃ₐ[K]
+    (Matrix (Fin $ FiniteDimensional.finrank K A) (Fin $ FiniteDimensional.finrank K A) K) :=
+  equivEnd K A |>.trans $ algEquivMatrix $ FiniteDimensional.finBasis _ _
+
+def tensor_op_self [Small.{v} K] [IsCentralSimple K A] [FiniteDimensional K A] :
+    Aᵐᵒᵖ ⊗[K] A ≃ₐ[K]
+    (Matrix (Fin $ FiniteDimensional.finrank K A) (Fin $ FiniteDimensional.finrank K A) K) :=
+  (Algebra.TensorProduct.comm _ _ _).trans $ tensor_self_op _ _
 
 /-
 ## TODO:
@@ -407,7 +517,7 @@ lemma mul_inv (A : CSA.{u, u} K) : IsBrauerEquivalent (mul A (inv (K := K) A)) o
     have := FiniteDimensional.finrank_pos_iff (R := K) (M := A) |>.2 $
       RingCon.instNontrivialOfIsSimpleOrder_fLT A.carrier
     omega
-  have := tensor_self_op K A A.is_central_simple n rfl
+  have := tensor_self_op K A
   exact ⟨⟨1, n, one_ne_zero, hn, dim_one_iso _|>.trans this⟩⟩
 
 lemma inv_mul (A : CSA.{u, u} K) : IsBrauerEquivalent (mul (inv (K := K) A) A) one_in' := by
@@ -419,7 +529,7 @@ lemma inv_mul (A : CSA.{u, u} K) : IsBrauerEquivalent (mul (inv (K := K) A) A) o
     have := FiniteDimensional.finrank_pos_iff (R := K) (M := A) |>.2 $
       RingCon.instNontrivialOfIsSimpleOrder_fLT A.carrier
     omega
-  have := tensor_op_self K A A.is_central_simple n rfl
+  have := tensor_op_self K A
   exact ⟨⟨1, n, one_ne_zero, hn, dim_one_iso _|>.trans this⟩⟩
 
 
@@ -526,15 +636,73 @@ def rid_to_K_equiv : E ⊗[E] E ≃ₐ[K] E where
   commutes' := by simp only [Algebra.TensorProduct.algebraMap_apply, Algebra.TensorProduct.rid_tmul,
     smul_eq_mul, _root_.one_mul, implies_true]
 
+def huarongdao0 :
+    (restrict K E A') ⊗[K] (restrict K E B') ≃ₐ[K] (restrict K E $ A' ⊗[E] B') :=
+  let L : (restrict K E A') ⊗[K] (restrict K E B') →ₐ[K] (restrict K E $ A' ⊗[E] B') :=
+    (Algebra.TensorProduct.lift
+      { toFun := fun a => a ⊗ₜ 1
+        map_one' := rfl
+        map_mul' := fun _ _ => by
+          rw [Algebra.TensorProduct.tmul_mul_tmul]
+          simp
+        map_zero' := by simp
+        map_add' := fun _ _ => by simp [TensorProduct.add_tmul]
+        commutes' := fun k => by rfl }
+      { toFun := fun a => 1 ⊗ₜ a
+        map_one' := rfl
+        map_mul' := fun _ _ => by
+          rw [Algebra.TensorProduct.tmul_mul_tmul]
+          simp
+        map_zero' := by simp
+        map_add' := fun _ _ => by simp [TensorProduct.tmul_add]
+        commutes' := fun k => by
+          simp only
+          change 1 ⊗ₜ[E] (algebraMap E B' (algebraMap K E k)) =
+            algebraMap E A' (algebraMap K E k) ⊗ₜ _
+          simp only [Algebra.algebraMap_eq_smul_one]
+          rw [TensorProduct.tmul_smul, TensorProduct.smul_tmul'] }
+      fun a b => show _ = _ by
+        simp only [AlgHom.coe_mk, RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
+        rw [Algebra.TensorProduct.tmul_mul_tmul, _root_.one_mul, _root_.mul_one]
+        rw [Algebra.TensorProduct.tmul_mul_tmul, _root_.one_mul, _root_.mul_one])
+  AlgEquiv.ofBijective L
+    ⟨by sorry /-the function is surjective; dim LHS = dim RHS-/, by
+        intro x
+        induction' x using TensorProduct.induction_on with x y x y ihx ihy
+        · use 0; simp
+        · use x ⊗ₜ y
+          simp only [Algebra.TensorProduct.lift_tmul, AlgHom.coe_mk, RingHom.coe_mk,
+            MonoidHom.coe_mk, OneHom.coe_mk, L]
+          rw [Algebra.TensorProduct.tmul_mul_tmul, _root_.one_mul, _root_.mul_one]
+        · rcases ihx with ⟨x, rfl⟩
+          rcases ihy with ⟨y, rfl⟩
+          refine ⟨x + y, by simp⟩⟩
+
+def huarongdao1 : (E ⊗[K] restrict K E A') ≃ₐ[K] restrict K E A' :=
+  let L : (E ⊗[K] restrict K E A') →ₐ[K] restrict K E A' :=
+    Algebra.TensorProduct.lift
+      { toFun := fun e => algebraMap E A' e
+        map_one' := map_one _
+        map_mul' := map_mul _
+        map_zero' := map_zero _
+        map_add' := map_add _
+        commutes' := fun k => rfl }
+      { toFun := fun a => a
+        map_one' := rfl
+        map_mul' := fun _ _ => rfl
+        map_zero' := rfl
+        map_add' := fun _ _ => rfl
+        commutes' := fun _ => rfl } fun e a => show _ = _ by
+      simp only [AlgHom.coe_mk, RingHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
+      exact Algebra.commutes (R := E) (A := A') e a
+  AlgEquiv.ofBijective L ⟨sorry /-again; by degree concern-/, fun a => ⟨1 ⊗ₜ a, by simp [L]⟩⟩
+
 set_option maxHeartbeats 800000 in
 def huarongdao2 : E ⊗[K] (restrict K E A') ⊗[K] (restrict K E B') ≃ₐ[K]
     (E ⊗[K] (restrict K E A')) ⊗[E] (E ⊗[K] restrict K E B') := by
-  -- unfold restrict
-  refine Algebra.TensorProduct.assoc _ _ _ _|>.symm.trans $ Algebra.TensorProduct.congr
-    (Algebra.TensorProduct.comm _ _ _) AlgEquiv.refl|>.trans ?_
-  have e1 := Algebra.TensorProduct.congr (R := K) (S := K)
-    (AlgEquiv.refl (A₁ := (restrict K E A'))) $ (rid_to_K_equiv (K := K) (E := E)).symm
-  refine Algebra.TensorProduct.congr e1 AlgEquiv.refl|>.trans ?_
+  refine Algebra.TensorProduct.assoc K E (restrict K E A') (restrict K E B') |>.symm.trans $
+     Algebra.TensorProduct.congr (huarongdao1 A') AlgEquiv.refl |>.trans ?_
+  sorry
 
 abbrev BaseChange : BrGroup (K := K) →* BrGroup (K := E) where
   toFun := sorry
