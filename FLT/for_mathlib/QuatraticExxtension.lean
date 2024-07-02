@@ -28,22 +28,21 @@ variable {d : K}
 --     ⟨fun h => by injection h; constructor <;> assumption,
 --      fun ⟨h₁, h₂⟩ => by congr⟩
 
-def ofField (n : K) : K√d :=
-  ⟨n, 0⟩
+def ofField (n : K) : K√d := ⟨n, 0⟩
 
-theorem ofField_re (n : K) : (ofField n : K√d).re = n := by aesop
+theorem ofField_re (n : K) : (ofField n : K√d).re = n := rfl
 
 
-theorem ofField_im (n : K) : (ofField n : K√d).im = 0 := by aesop
+theorem ofField_im (n : K) : (ofField n : K√d).im = 0 := rfl
 
 instance : Zero (K√d) :=
   ⟨ofField 0⟩
 
 @[simp]
-theorem zero_re : (0 : K√d).re = 0 := by aesop
+theorem zero_re : (0 : K√d).re = 0 := rfl
 
 @[simp]
-theorem zero_im : (0 : K√d).im = 0 := by aesop
+theorem zero_im : (0 : K√d).im = 0 := rfl
 
 instance : Inhabited (K√d) :=
   ⟨0⟩
@@ -393,20 +392,55 @@ def normMonoidHom : K√d →* K where
 
 theorem norm_eq_mul_conj (n : K√d) : (norm n : K) = n * star n := by
   ext <;> simp [norm, star, mul_comm, sub_eq_add_neg]
-def inv_of_this: K√d → K√d := fun z => ⟨z.re / (z.re ^ 2 - d * z.im ^ 2), -z.im / (z.re ^ 2 - d * z.im ^ 2)⟩
 
--- instance :DivisionRing (K√d) := 
---   { inv := inv_of_this,
---     div := fun z w => z * (inv_of_this w),
---     mul_inv_cancel := ?_
---     inv_zero := ?_
---     exists_pair_ne := ?_
---     nnqsmul := ?_
---     qsmul := ?_
---     -- has_div := ?_
---     div_eq_mul_inv := ?_ } 
+def inv_of_this: K√d → K√d := fun z => 
+  ⟨z.re / (z.re ^ 2 - d * z.im ^ 2), -z.im / (z.re ^ 2 - d * z.im ^ 2)⟩
+
+instance : Inv (K√d) where
+  inv := inv_of_this
+
+instance : Div (K√d) where
+  div x y := x * y⁻¹
+
+
+instance : DivisionRing (K√d) where
+  zero_add := zero_add
+  add_zero := add_zero
+  nsmul := fun n x ↦ n • x
+  add_comm := add_comm
+  left_distrib := by exact mul_add 
+  right_distrib := by exact add_mul
+  zero_mul := zero_mul
+  mul_zero := mul_zero
+  mul_assoc := mul_assoc
+  one_mul := one_mul
+  mul_one := mul_one
+  natCast_zero := Nat.cast_zero
+  natCast_succ := Nat.cast_succ
+  zsmul := fun z x ↦ z • x
+  add_left_neg := fun _ ↦ neg_add_self _
+  intCast_ofNat := fun _ ↦ Int.cast_natCast _
+  intCast_negSucc := fun _ ↦ Int.cast_negSucc _
+  div_eq_mul_inv := fun _ _ ↦ rfl
+  mul_inv_cancel := fun a ha ↦ by 
+    simp only [nsmul_eq_mul, inv_of_this]; ext
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_re, one_re]; 
+      ring_nf; rw [← sub_mul, mul_inv_cancel]
+      rw [pow_two, pow_two, ← mul_assoc, ← norm_def]; sorry
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_im, one_im]; sorry
+  inv_zero := by 
+    change inv_of_this 0 = 0; simp only [inv_of_this, zero_re, ne_eq, OfNat.ofNat_ne_zero,
+      not_false_eq_true, zero_pow, zero_im, mul_zero, sub_self, div_zero, neg_zero]; rfl
+  nnqsmul := _
+  qsmul := fun q x ↦ ⟨q * x.re, q * x.im⟩
+  qsmul_def := fun q x ↦ by 
+    ext <;> simp only [nsmul_eq_mul, mul_re, mul_im]
+    · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
+      simp only [mul_zero, zero_mul, add_zero]
+    · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
+      simp only [zero_mul, add_zero]
+
 -- instance : Field (K√d) := by
---   rw?
 -- {
 --   _ := Ksqrtd.DivisionRing,
 --   _ := Ksqrtd.commRing,
