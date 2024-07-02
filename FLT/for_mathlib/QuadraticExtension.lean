@@ -1,12 +1,8 @@
--- import Mathlib.NumberTheory.Cyclotomic.Basic
-
--- #check IsCyclotomicExtension
--- #check Zsqrtd
 import Mathlib.NumberTheory.Zsqrtd.Basic
-import Mathlib.Algebra.Associated
-import Mathlib.RingTheory.Int.Basic
-import Mathlib.Tactic.Ring
-import Mathlib.Algebra.Star.Unitary
+import Mathlib.Tactic
+
+suppress_compilation
+
 variable {K: Type*} [Field K] [CharZero K]
 
 @[ext]
@@ -18,8 +14,6 @@ structure Ksqrtd (d : K) where
 prefix:100 "K√" => Ksqrtd
 
 namespace Ksqrtd
-
-section
 
 variable {d : K}
 -- variable (K: Type*) [Field K] [CharZero K]
@@ -464,7 +458,5 @@ instance (hd : ¬(IsSquare d)) : Field (K√d) :=
 }
 
 end Norm
-
-end
 
 end Ksqrtd
