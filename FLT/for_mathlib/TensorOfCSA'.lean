@@ -441,8 +441,58 @@ def matrixEquivRev (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [Decida
       Matrix.stdBasisMatrix p.1.1 p.2.1 1 ⊗ₜ Matrix.stdBasisMatrix p.1.2 p.2.2 1)
     (by
       rw [@Basis.constr_apply_fintype, Algebra.TensorProduct.one_def]
-      simp only [Basis.equivFun_apply, Fintype.sum_prod_type]
-      sorry)
+      simp only [Basis.equivFun_apply]
+      have (x : (m × n) × m × n) : (Matrix.stdBasis K (m × n) (m × n)).repr 1 x =
+        if x.1 = x.2 then 1 else 0 := by
+        rcases x with ⟨i, j⟩
+        dsimp
+        rw [show (1 : Matrix (m × n) (m × n) K) = ∑ x : m × n, Matrix.stdBasisMatrix x x 1 by
+          ext i j
+          rw [Matrix.one_apply]
+          unfold Matrix.stdBasisMatrix
+          rw [Matrix.sum_apply]
+          split_ifs with h
+          · subst h
+            simp
+          · symm; apply Finset.sum_eq_zero; aesop]
+        rw [map_sum]
+        simp_rw [← Matrix.stdBasis_eq_stdBasisMatrix]
+        simp_rw [Basis.repr_self]
+        rw [Finsupp.coe_finset_sum]
+        rw [Finset.sum_apply]
+        simp_rw [Finsupp.single_apply]
+
+        split_ifs with h
+        · subst h
+          simp only [Prod.mk.injEq, and_self, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
+        · apply Finset.sum_eq_zero; aesop
+      simp_rw [this]
+      rw [Fintype.sum_prod_type]
+      simp only [ite_smul, one_smul, zero_smul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte,
+        Fintype.sum_prod_type]
+      rw [show (1 : Matrix m m K) = ∑ x : m, Matrix.stdBasisMatrix x x 1 by
+        ext i j
+        rw [Matrix.one_apply]
+        unfold Matrix.stdBasisMatrix
+        rw [Matrix.sum_apply]
+        split_ifs with h
+        · subst h
+          simp
+        · symm; apply Finset.sum_eq_zero; aesop]
+
+      rw [show (1 : Matrix n n K) = ∑ x : n, Matrix.stdBasisMatrix x x 1 by
+        ext i j
+        rw [Matrix.one_apply]
+        unfold Matrix.stdBasisMatrix
+        rw [Matrix.sum_apply]
+        split_ifs with h
+        · subst h
+          simp
+        · symm; apply Finset.sum_eq_zero; aesop]
+
+      rw [TensorProduct.sum_tmul]
+      simp_rw [TensorProduct.tmul_sum]) fun M N => by
+
   sorry
 
 def matrix_eqv (n m : ℕ): (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K]
@@ -463,10 +513,14 @@ def matrix_eqv (n m : ℕ): (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (F
   commutes' := matrixEquivForward _ _|>.commutes
 
 lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
-    IsBrauerEquivalent A (one_mul_in n hn A) := by sorry
+    IsBrauerEquivalent A (one_mul_in n hn A) :=
+  ⟨⟨n, 1, hn, by omega, AlgEquiv.symm $ (dim_one_iso _).trans $ matrixEquivTensor _ _ _ |>.symm⟩⟩
 
 lemma mul_one (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
-    IsBrauerEquivalent A (mul_one_in n hn A) := by sorry
+    IsBrauerEquivalent A (mul_one_in n hn A) :=
+  ⟨⟨n, 1, hn, by omega, AlgEquiv.symm $ (dim_one_iso _).trans $ AlgEquiv.symm $
+    matrixEquivTensor _ _ _ |>.trans $ Algebra.TensorProduct.comm _ _ _⟩⟩
+
 
 
 lemma mul_assoc (A B C : CSA K) :
