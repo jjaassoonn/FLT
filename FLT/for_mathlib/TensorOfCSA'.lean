@@ -243,47 +243,6 @@ theorem Braur_is_eqv : Equivalence (IsBrauerEquivalent (K := K)) where
   symm := symm
   trans := trans
 
--- structure BrauerEquivalence' (A B : CSA.{u, v} K) :=
--- (indexLeft indexRight : ℕ)
--- (indexLeft_ne_zero : indexLeft ≠ 0)
--- (indexRight_ne_zero : indexRight ≠ 0)
--- (D : Type v) (div : DivisionRing D) (alg : Algebra K D)
--- (D' : Type v) (div' : DivisionRing D') (alg' : Algebra K D')
--- (isoLeft : A ≃ₐ[K] Matrix (Fin indexLeft) (Fin indexLeft) D)
--- (isoRight : B ≃ₐ[K] Matrix (Fin indexRight) (Fin indexRight) D')
--- (isobase : D ≃ₐ[K] D')
-
--- abbrev IsBrauerEquivalent' (A B : CSA K) := Nonempty (BrauerEquivalence' A B)
-
--- theorem iso_to_eqv' (A B : CSA K) (h : A ≃ₐ[K] B) : IsBrauerEquivalent' A B := by
---   obtain ⟨n, hn, D, inst1, inst2, ⟨e⟩⟩ := Wedderburn_Artin_algebra_version K A
---   obtain ⟨m, hm, D', inst1', inst2', ⟨e'⟩⟩ := Wedderburn_Artin_algebra_version K B
---   have := (Wedderburn_Artin_divisionRing_unique_algebra_version K D D' n m hn hm
---     ((e.symm.trans h).trans e'))
---   obtain ⟨iso⟩ := this
---   exact ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e, e', iso⟩
-
--- def refl' (A : CSA K) : IsBrauerEquivalent' A A := by
---    obtain ⟨n, hn, D, inst1, inst2, ⟨e⟩⟩ := Wedderburn_Artin_algebra_version K A
---    refine ⟨n, n, hn, hn, D, inst1, inst2, D, inst1, inst2, e, e, AlgEquiv.refl ⟩
-
--- def symm' {A B : CSA K} (h : IsBrauerEquivalent' A B) : IsBrauerEquivalent' B A := by
---    obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, e⟩ := h
---    exact ⟨m, n, hm, hn, D', inst1', inst2', D, inst1, inst2, e2, e1, e.symm⟩
-
--- def trans' {A B C : CSA K} (hAB : IsBrauerEquivalent' A B) (hBC : IsBrauerEquivalent' B C) :
---     IsBrauerEquivalent' A C := by
---   obtain ⟨n, m, hn, hm, D, inst1, inst2, D', inst1', inst2', e1, e2, iso1⟩ := hAB
---   obtain ⟨p, q, hp, hq, E, inst3, inst4, E', inst3', inst4', e1', e2', iso2⟩ := hBC
---   obtain ⟨isoiso⟩ :=
---     Wedderburn_Artin_divisionRing_unique_algebra_version K D' E m p hm hp $ e2.symm.trans e1'
---   refine ⟨_, _, hn, hq, _, _, _, _, _, _, e1, e2', iso1.trans $ isoiso.trans iso2⟩
-
--- theorem Braur_is_eqv' : Equivalence (IsBrauerEquivalent' (K := K)) where
---   refl := refl'
---   symm := symm'
---   trans := trans'
-
 end IsBrauerEquivalent
 
 namespace BrauerGroup
@@ -422,7 +381,7 @@ lemma choose_span_of_Tensor (A B : Type*) [Ring A] [Algebra K A] [Ring B] [Algeb
   conv_rhs => rw [← Finset.sum_attach]
   exact Finset.sum_congr rfl fun _ _ ↦ (by aesop)
 
-def matrixEquivForward (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
+def matrixEquivForward (m n : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
     Matrix m m K ⊗[K] Matrix n n K →ₐ[K] Matrix (m × n) (m × n) K :=
   Algebra.TensorProduct.algHomOfLinearMapTensorProduct
     (TensorProduct.lift Matrix.kroneckerBilinear)
@@ -430,87 +389,141 @@ def matrixEquivForward (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [De
     (Matrix.one_kronecker_one (α := K))
 
 open scoped Kronecker in
-theorem matrixEquivForward_tmul (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n]
-    (M : Matrix m m K) (N : Matrix n n K) : matrixEquivForward m n (N ⊗ₜ M) = N ⊗ₖ M := rfl
+theorem matrixEquivForward_tmul (m n : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n]
+    (M : Matrix m m K) (N : Matrix n n K) : matrixEquivForward m n (M ⊗ₜ N) = M ⊗ₖ N := rfl
 
+lemma matrixEquivForward_surjective
+    (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
+    Function.Surjective $ matrixEquivForward (K := K) m n := by
+  intro x
+  rw [Matrix.matrix_eq_sum_std_basis x]
+  suffices H :
+      ∀ (i j : m × n), ∃ a, (matrixEquivForward m n) a = Matrix.stdBasisMatrix i j (x i j) by
+    choose a ha using H
+    use ∑ i : m × n, ∑ j : m × n, a i j
+    rw [map_sum]
+    simp_rw [map_sum]
+    simp_rw [ha]
 
-def matrixEquivRev (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
-    Matrix (m × n) (m × n) K →ₐ[K] Matrix m m K ⊗[K] Matrix n n K :=
-  AlgHom.ofLinearMap
-    (Basis.constr (S := K) (Matrix.stdBasis K _ _) fun p =>
-      Matrix.stdBasisMatrix p.1.1 p.2.1 1 ⊗ₜ Matrix.stdBasisMatrix p.1.2 p.2.2 1)
-    (by
-      rw [@Basis.constr_apply_fintype, Algebra.TensorProduct.one_def]
-      simp only [Basis.equivFun_apply]
-      have (x : (m × n) × m × n) : (Matrix.stdBasis K (m × n) (m × n)).repr 1 x =
-        if x.1 = x.2 then 1 else 0 := by
-        rcases x with ⟨i, j⟩
-        dsimp
-        rw [show (1 : Matrix (m × n) (m × n) K) = ∑ x : m × n, Matrix.stdBasisMatrix x x 1 by
-          ext i j
-          rw [Matrix.one_apply]
-          unfold Matrix.stdBasisMatrix
-          rw [Matrix.sum_apply]
-          split_ifs with h
-          · subst h
-            simp
-          · symm; apply Finset.sum_eq_zero; aesop]
-        rw [map_sum]
-        simp_rw [← Matrix.stdBasis_eq_stdBasisMatrix]
-        simp_rw [Basis.repr_self]
-        rw [Finsupp.coe_finset_sum]
-        rw [Finset.sum_apply]
-        simp_rw [Finsupp.single_apply]
+  intro i j
+  rw [show Matrix.stdBasisMatrix i j (x i j) = (x i j) • Matrix.stdBasisMatrix i j 1 by
+    rw [Matrix.smul_stdBasisMatrix, Algebra.smul_def,  mul_one]
+    rfl]
+  use (x i j) • ((Matrix.stdBasisMatrix i.1 j.1 1) ⊗ₜ (Matrix.stdBasisMatrix i.2 j.2 1))
+  rw [(matrixEquivForward (K := K) m n).map_smul (x i j)]
+  congr 1
+  simp only [matrixEquivForward, Algebra.TensorProduct.algHomOfLinearMapTensorProduct_apply,
+    TensorProduct.lift.tmul]
+  ext a b
+  erw [Matrix.kroneckerMapBilinear_apply_apply]
+  erw [Matrix.kroneckerMap_apply]
+  erw [Algebra.coe_lmul_eq_mul]
+  rw [LinearMap.mul]
+  simp only [LinearMap.mk₂_apply]
+  simp only [Matrix.stdBasisMatrix, mul_ite, mul_one, mul_zero]
+  split_ifs with h1 h2 h3 h4 h5
+  · rfl
+  · simp only [not_and, ne_eq] at h3
+    refine h3 ?_ ?_ |>.elim <;> ext <;> aesop
+  · simp only [not_and, ne_eq] at h2
+    refine h2 ?_ ?_ |>.elim <;> aesop
+  · rfl
+  · simp only [not_and, ne_eq] at h1
+    refine h1 ?_ ?_ |>.elim <;> aesop
+  · rfl
 
-        split_ifs with h
-        · subst h
-          simp only [Prod.mk.injEq, and_self, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
-        · apply Finset.sum_eq_zero; aesop
-      simp_rw [this]
-      rw [Fintype.sum_prod_type]
-      simp only [ite_smul, one_smul, zero_smul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte,
-        Fintype.sum_prod_type]
-      rw [show (1 : Matrix m m K) = ∑ x : m, Matrix.stdBasisMatrix x x 1 by
-        ext i j
-        rw [Matrix.one_apply]
-        unfold Matrix.stdBasisMatrix
-        rw [Matrix.sum_apply]
-        split_ifs with h
-        · subst h
-          simp
-        · symm; apply Finset.sum_eq_zero; aesop]
+-- def matrixEquivRev (n m : Type*) [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n] :
+--     Matrix (m × n) (m × n) K →ₐ[K] Matrix m m K ⊗[K] Matrix n n K :=
+--   AlgHom.ofLinearMap
+--     (Basis.constr (S := K) (Matrix.stdBasis K _ _) fun p =>
+--       Matrix.stdBasisMatrix p.1.1 p.2.1 1 ⊗ₜ Matrix.stdBasisMatrix p.1.2 p.2.2 1)
+--     (by
+--       rw [@Basis.constr_apply_fintype, Algebra.TensorProduct.one_def]
+--       simp only [Basis.equivFun_apply]
+--       have (x : (m × n) × m × n) : (Matrix.stdBasis K (m × n) (m × n)).repr 1 x =
+--         if x.1 = x.2 then 1 else 0 := by
+--         rcases x with ⟨i, j⟩
+--         dsimp
+--         rw [show (1 : Matrix (m × n) (m × n) K) = ∑ x : m × n, Matrix.stdBasisMatrix x x 1 by
+--           ext i j
+--           rw [Matrix.one_apply]
+--           unfold Matrix.stdBasisMatrix
+--           rw [Matrix.sum_apply]
+--           split_ifs with h
+--           · subst h
+--             simp
+--           · symm; apply Finset.sum_eq_zero; aesop]
+--         rw [map_sum]
+--         simp_rw [← Matrix.stdBasis_eq_stdBasisMatrix]
+--         simp_rw [Basis.repr_self]
+--         rw [Finsupp.coe_finset_sum]
+--         rw [Finset.sum_apply]
+--         simp_rw [Finsupp.single_apply]
 
-      rw [show (1 : Matrix n n K) = ∑ x : n, Matrix.stdBasisMatrix x x 1 by
-        ext i j
-        rw [Matrix.one_apply]
-        unfold Matrix.stdBasisMatrix
-        rw [Matrix.sum_apply]
-        split_ifs with h
-        · subst h
-          simp
-        · symm; apply Finset.sum_eq_zero; aesop]
+--         split_ifs with h
+--         · subst h
+--           simp only [Prod.mk.injEq, and_self, Finset.sum_ite_eq', Finset.mem_univ, ↓reduceIte]
+--         · apply Finset.sum_eq_zero; aesop
+--       simp_rw [this]
+--       rw [Fintype.sum_prod_type]
+--       simp only [ite_smul, one_smul, zero_smul, Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte,
+--         Fintype.sum_prod_type]
+--       rw [show (1 : Matrix m m K) = ∑ x : m, Matrix.stdBasisMatrix x x 1 by
+--         ext i j
+--         rw [Matrix.one_apply]
+--         unfold Matrix.stdBasisMatrix
+--         rw [Matrix.sum_apply]
+--         split_ifs with h
+--         · subst h
+--           simp
+--         · symm; apply Finset.sum_eq_zero; aesop]
 
-      rw [TensorProduct.sum_tmul]
-      simp_rw [TensorProduct.tmul_sum]) fun M N => by
+--       rw [show (1 : Matrix n n K) = ∑ x : n, Matrix.stdBasisMatrix x x 1 by
+--         ext i j
+--         rw [Matrix.one_apply]
+--         unfold Matrix.stdBasisMatrix
+--         rw [Matrix.sum_apply]
+--         split_ifs with h
+--         · subst h
+--           simp
+--         · symm; apply Finset.sum_eq_zero; aesop]
 
-  sorry
+--       rw [TensorProduct.sum_tmul]
+--       simp_rw [TensorProduct.tmul_sum]) fun M N => by
 
-def matrix_eqv (n m : ℕ): (Matrix (Fin n) (Fin n) K) ⊗[K] (Matrix (Fin m) (Fin m) K) ≃ₐ[K]
-    Matrix (Fin n × Fin m) (Fin n × Fin m) K where
-  toFun := matrixEquivForward (Fin m) (Fin n)
-  invFun := matrixEquivRev (Fin m) (Fin n)
-  left_inv := by
-    intro x
-    obtain ⟨I, x1, x2, hI⟩ :=
-      choose_span_of_Tensor (Matrix (Fin n) (Fin n) K) (Matrix (Fin m) (Fin m) K) x
-    simp only [matrixEquivRev, hI, map_sum, matrixEquivForward_tmul, AlgHom.ofLinearMap_apply,
-      Basis.constr_apply_fintype, Basis.equivFun_apply, Fintype.sum_prod_type]
+--   sorry
 
-    sorry
-  right_inv := sorry
-  map_mul' := matrixEquivForward _ _|>.map_mul
-  map_add' := matrixEquivForward _ _|>.map_add
-  commutes' := matrixEquivForward _ _|>.commutes
+def matrix_eqv (m n : ℕ): (Matrix (Fin m) (Fin m) K) ⊗[K] (Matrix (Fin n) (Fin n) K) ≃ₐ[K]
+    Matrix (Fin m × Fin n) (Fin m × Fin n) K :=
+  AlgEquiv.ofBijective
+    (matrixEquivForward (Fin m) (Fin n)) $ by
+    if h : n = 0 ∨ m = 0
+    then
+      rcases h with h|h <;>
+      subst h <;>
+      refine ⟨?_, matrixEquivForward_surjective _ _⟩ <;>
+      intro x y _ <;>
+      apply Subsingleton.elim
+
+    else
+    have : Nonempty (Fin n) := ⟨0, by omega⟩
+    have : Nonempty (Fin m) := ⟨0, by omega⟩
+    apply bijective_of_surj_of_isCentralSimple
+    apply matrixEquivForward_surjective
+  -- toFun := matrixEquivForward (Fin m) (Fin n)
+  -- invFun := matrixEquivRev (Fin m) (Fin n)
+  -- left_inv := by
+  --   intro x
+  --   obtain ⟨I, x1, x2, hI⟩ :=
+  --     choose_span_of_Tensor (Matrix (Fin n) (Fin n) K) (Matrix (Fin m) (Fin m) K) x
+  --   simp only [matrixEquivRev, hI, map_sum, matrixEquivForward_tmul, AlgHom.ofLinearMap_apply,
+  --     Basis.constr_apply_fintype, Basis.equivFun_apply, Fintype.sum_prod_type]
+
+  --   sorry
+  -- right_inv := sorry
+  -- map_mul' := matrixEquivForward _ _|>.map_mul
+  -- map_add' := matrixEquivForward _ _|>.map_add
+  -- commutes' := matrixEquivForward _ _|>.commutes
 
 lemma one_mul (n : ℕ) (hn : n ≠ 0) (A : CSA K) :
     IsBrauerEquivalent A (one_mul_in n hn A) :=
