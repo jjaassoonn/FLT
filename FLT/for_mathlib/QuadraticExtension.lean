@@ -399,7 +399,7 @@ instance : Div (K√d) where
 lemma not_square_to_norm_not_zero (hd : ¬(IsSquare d)) : ∀(x : K√d), x ≠ 0 → x.norm ≠ 0 := by
   intro x hx hnx
   unfold norm at hnx
-  if hxi : x.im = 0 then 
+  if hxi : x.im = 0 then
     simp only [hxi, mul_zero, sub_zero, mul_eq_zero, or_self] at hnx
     apply hx ; exact Ksqrtd.ext _ _ hnx hxi
   else
@@ -410,6 +410,19 @@ lemma not_square_to_norm_not_zero (hd : ¬(IsSquare d)) : ∀(x : K√d), x ≠ 
     rw [sq_eq] at hnx; symm at hnx; rw [pow_two] at hnx
     have : IsSquare d := ⟨(x.re /x.im), hnx⟩ ; tauto
 
+instance GroupWithZero (hd : ¬(IsSquare d)) : GroupWithZero (K√d) where
+  inv := _
+  inv_zero := by
+    change inv_of_this 0 = 0; simp only [inv_of_this, zero_re, ne_eq, OfNat.ofNat_ne_zero,
+      not_false_eq_true, zero_pow, zero_im, mul_zero, sub_self, div_zero, neg_zero]; rfl
+  mul_inv_cancel := fun a ha ↦ by
+    simp only [nsmul_eq_mul, inv_of_this]; ext
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_re, one_re];
+      ring_nf; rw [← sub_mul, mul_inv_cancel]
+      rw [pow_two, pow_two, ← mul_assoc, ← norm_def];
+      exact not_square_to_norm_not_zero hd a ha
+    · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_im, one_im]; ring
+  
 
 instance DivisionRing (hd : ¬(IsSquare d)): DivisionRing (K√d) where
   zero_add := zero_add
@@ -434,7 +447,7 @@ instance DivisionRing (hd : ¬(IsSquare d)): DivisionRing (K√d) where
     simp only [nsmul_eq_mul, inv_of_this]; ext
     · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_re, one_re];
       ring_nf; rw [← sub_mul, mul_inv_cancel]
-      rw [pow_two, pow_two, ← mul_assoc, ← norm_def]; 
+      rw [pow_two, pow_two, ← mul_assoc, ← norm_def];
       exact not_square_to_norm_not_zero hd a ha
     · simp only [show a⁻¹ = inv_of_this a from rfl, inv_of_this, mul_im, one_im]; ring
   inv_zero := by
@@ -443,17 +456,64 @@ instance DivisionRing (hd : ¬(IsSquare d)): DivisionRing (K√d) where
   nnqsmul := _
   qsmul := fun q x ↦ ⟨q * x.re, q * x.im⟩
   qsmul_def := fun q x ↦ by
-    ext <;> simp only [nsmul_eq_mul, mul_re, mul_im]
-    · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
-      simp only [mul_zero, zero_mul, add_zero]
-    · rw [show (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) by sorry]
-      simp only [zero_mul, add_zero]
+    have q_eq : (@Rat.cast (K√d) { ratCast := Rat.castRec } q) = (q : K) := by
+      if hq : q.den = 0 then 
+        have: q = 0 := by rw [← Rat.num_div_den q, hq]; simp only [CharP.cast_eq_zero, div_zero]
+        simp only [this, Rat.cast_zero]; aesop
+      else
+        haveI := Ksqrtd.GroupWithZero hd
+        change ((q.num : K√d) / (q.den : K√d)) = _
+        apply_fun fun x ↦ x * (q.den : K√d)
+        · ext <;> simp only
+          · rw [mul_re, natCast_re, natCast_im, mul_zero, add_zero, mul_re, natCast_im, mul_zero,
+              add_zero]; change _ = (q : K) * q.den; nth_rw 4 [← Rat.num_div_den q]; 
+            simp only [Rat.cast_div, Rat.cast_intCast, Rat.cast_natCast, isUnit_iff_ne_zero, ne_eq,
+              Nat.cast_eq_zero, Rat.den_ne_zero, not_false_eq_true, IsUnit.div_mul_cancel]
+            change ((q.num : _) * (q.den : K√d)⁻¹).re * _ = _
+            rw [mul_re, intCast_im, mul_zero, zero_mul, add_zero, intCast_re, mul_assoc]
+            rw [show (q.den : K√d)⁻¹ = inv_of_this _ from rfl, inv_of_this] 
+            simp only [natCast_re, pow_two, natCast_im, mul_zero, sub_zero, div_self_mul_self',
+              isUnit_iff_ne_zero, ne_eq, Nat.cast_eq_zero, Rat.den_ne_zero, not_false_eq_true,
+              IsUnit.inv_mul_cancel, mul_one]
+          · simp only [mul_im, natCast_im, mul_zero, natCast_re, zero_add, zero_mul, add_zero,
+            mul_eq_zero, Nat.cast_eq_zero, Rat.den_ne_zero, or_false]
+            change (_ * (q.den : K√d)⁻¹).im = _
+            rw [show (q.den : K√d)⁻¹ = inv_of_this _ from rfl, inv_of_this]
+            simp only [natCast_re, pow_two, natCast_im, mul_zero, sub_zero, div_self_mul_self',
+              neg_zero, zero_div, mul_im, intCast_re, intCast_im, zero_mul, add_zero]
+        · intro a b hab 
+          simp only at hab
+          apply_fun fun x => x/(q.den : K√d) at hab 
+          change _ * (q.den : K√d)⁻¹ = _ * (q.den : K√d)⁻¹ at hab
+          have hq' : (q.den : K√d) ≠ 0 := by
+            suffices q.den ≠ 0 by simp 
+            exact hq
+          rw [mul_assoc, mul_assoc] at hab
+          have eq1 : (a * (↑q.den * (↑q.den)⁻¹)).re = (b * (↑q.den * (↑q.den)⁻¹)).re := by 
+            simp_all only [Rat.den_ne_zero, not_false_eq_true, ne_eq, Nat.cast_eq_zero, mul_re,
+              natCast_re, natCast_im, mul_zero, zero_mul, add_zero, mul_im]
+          rw [show (q.den : K√d)⁻¹ = inv_of_this _ from rfl, inv_of_this] at eq1 
+          simp only [natCast_re, pow_two, natCast_im, mul_zero, sub_zero, div_self_mul_self',
+            neg_zero, zero_div, mul_re, isUnit_iff_ne_zero, ne_eq, Nat.cast_eq_zero,
+            Rat.den_ne_zero, not_false_eq_true, IsUnit.mul_inv_cancel, add_zero, mul_one, mul_im,
+            zero_mul] at eq1
+          have eq2 : (a * (↑q.den * (↑q.den)⁻¹)).im = (b * (↑q.den * (↑q.den)⁻¹)).im := by 
+            simp_all only [Rat.den_ne_zero, not_false_eq_true, ne_eq, Nat.cast_eq_zero, mul_im,
+              natCast_re, natCast_im, zero_mul, add_zero, mul_re, mul_zero]
+          rw [show (q.den : K√d)⁻¹ = inv_of_this _ from rfl, inv_of_this] at eq2 
+          simp only [natCast_re, pow_two, natCast_im, mul_zero, sub_zero, div_self_mul_self',
+            neg_zero, zero_div, mul_im, zero_mul, add_zero, mul_re, isUnit_iff_ne_zero, ne_eq,
+            Nat.cast_eq_zero, Rat.den_ne_zero, not_false_eq_true, IsUnit.mul_inv_cancel, mul_one,
+            zero_add] at eq2
+          ext <;> simp only [eq1, eq2]
+    simp only [nsmul_eq_mul, q_eq]
+    ext <;> simp only [nsmul_eq_mul, mul_re, mul_im] <;> ring
 
 instance (hd : ¬(IsSquare d)) : Field (K√d) :=
 {
-  mul_inv_cancel := Ksqrtd.DivisionRing hd|>.mul_inv_cancel 
+  mul_inv_cancel := Ksqrtd.DivisionRing hd|>.mul_inv_cancel
   inv_zero := Ksqrtd.DivisionRing hd|>.inv_zero
-  nnqsmul := _ 
+  nnqsmul := _
   qsmul := _
 }
 
