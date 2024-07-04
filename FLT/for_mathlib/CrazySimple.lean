@@ -411,27 +411,29 @@ For `A`-module `M`,
 `Hom(Mⁿ, Mⁿ) ≅ Mₙ(Hom(M, M))`
 
 -/
+
 @[simps]
 def endPowEquivMatrix
     (M : Type*) [AddCommGroup M] [Module A M] (n : ℕ):
     Module.End A (Fin n → M) ≃+* M[Fin n, Module.End A M] where
-  toFun f := Matrix.of fun i j ↦
+  toFun f i j :=
   { toFun := fun x ↦ f (Function.update 0 j x) i
     map_add' := fun x y ↦ show  f _ i = (f _ + f _) i by
       rw [← f.map_add, ← Function.update_add, add_zero]
     map_smul' := fun x y ↦ show f _ _ = (x • f _) _ by
       rw [← f.map_smul, ← Function.update_smul, smul_zero] }
   invFun M :=
-  { toFun := fun x ↦ ∑ i : Fin n, Function.update 0 i (∑ j : Fin n, M i j (x j))
+  { toFun := fun x i ↦ (∑ j : Fin n, M i j (x j))
     map_add' := fun x y ↦ by
       simp only [map_add, ← Finset.sum_add_distrib, Pi.add_apply]
-      exact Finset.sum_congr rfl fun i _ ↦ funext fun j => by
-        rw [← Function.update_add, zero_add, ← Finset.sum_add_distrib]
+      ext; dsimp only [Pi.add_apply]
+      exact Finset.sum_add_distrib
     map_smul' := by
       intro a x
       simp only [Pi.smul_apply, LinearMapClass.map_smul, RingHom.id_apply, Finset.smul_sum]
-      refine Finset.sum_congr rfl fun i _ ↦ ?_
-      rw [← Function.update_smul, smul_zero, Finset.smul_sum] }
+      ext; dsimp only [Pi.smul_apply]
+      exact Eq.symm Finset.smul_sum
+      }
   left_inv f := by
     ext i x j : 3
     simp only [of_apply, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.coe_comp, LinearMap.coe_single,
@@ -458,8 +460,10 @@ def endPowEquivMatrix
     rw [← Fintype.sum_apply, ← map_sum]
     congr! 1
     ext k : 1
-    simp [Function.update]
-  map_add' _ _ := by ext i j x : 2; simp
+    simp only [Finset.sum_apply, Function.update, eq_rec_constant, Pi.zero_apply, dite_eq_ite,
+      Finset.sum_ite_eq, Finset.mem_univ, ↓reduceIte]
+  map_add' _ _ := by ext i j x : 2; simp only [LinearMap.add_apply, Pi.add_apply, of_apply,
+    LinearMap.coe_mk, AddHom.coe_mk, add_apply]
 
 theorem Wedderburn_Artin_ideal_version
     (A : Type u) [Ring A] [IsArtinianRing A] [simple : IsSimpleOrder (RingCon A)] :
@@ -634,11 +638,11 @@ lemma Wedderburn_Artin_algebra_version
   rw [Matrix.algebraMap_eq_diagonal]
   ext i j
   apply MulOpposite.unop_injective
-  simp only [RingEquiv.coe_trans, Function.comp_apply, RingEquiv.op_apply_apply, RingEquiv.coe_mk,
-    Equiv.coe_fn_mk, MulOpposite.unop_op, endPowEquivMatrix_apply, LinearMap.coe_comp,
-    LinearEquiv.coe_coe, matrixEquivMatrixMop_symm_apply, map_apply, transpose_apply, of_apply,
-    diagonal, Pi.algebraMap_apply, algebraEndIdealMop.algebraMap_eq, algebraMapEndIdealMop_apply,
-    endEquiv]
+  simp only [endPowEquivMatrix, RingEquiv.coe_trans, Function.comp_apply, equivEndMop_apply,
+    RingEquiv.op_apply_apply, unop_op, RingEquiv.coe_mk, Equiv.coe_fn_mk, LinearMap.coe_comp,
+    LinearEquiv.coe_coe, LinearMap.coe_mk, AddHom.coe_mk, matrixEquivMatrixMop_symm_apply,
+    map_apply, transpose_apply, diagonal, Pi.algebraMap_apply, algebraEndIdealMop.algebraMap_eq,
+    algebraMapEndIdealMop_apply, of_apply, endEquiv]
   split_ifs with h
   · subst h
     ext x : 1
@@ -662,6 +666,7 @@ lemma Wedderburn_Artin_algebra_version
       by ext : 1; simp [Function.update]]
     rw [← Algebra.commutes, ← smul_eq_mul, ← e.map_smul]
     exact congr_arg e $ by ext; simp
+
 
 instance (priority := high) (M : Type*) [AddCommGroup M] [Module B M]   :
     Algebra K (Module.End B M) :=
@@ -742,7 +747,7 @@ theorem is_fin_dim_of_wdb
   apply_fun (· ⟨0, by omega⟩ ⟨0, by omega⟩) at hr
   simp only [sum_apply, smul_apply, diagonal_apply_eq] at hr
   exact hr ▸ Submodule.sum_mem _ fun i hi =>
-    Submodule.smul_mem _ _ $ Submodule.subset_span $ by simpa using ⟨i, hi, rfl⟩
+    Submodule.smul_mem _ _ Submodule.subsetspan Submodule.subset_span  by simpa using ⟨i, hi, rfl⟩
 
 lemma bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed
     (K D : Type*) [Field K] [IsAlgClosed K] [DivisionRing D] [alg : Algebra K D]
@@ -757,7 +762,7 @@ theorem simple_eq_matrix_algClosed [IsAlgClosed K] [IsSimpleOrder (RingCon B)] :
   rcases Wedderburn_Artin_algebra_version K B with ⟨n, hn, S, ins1, ins2, ⟨e⟩⟩
   have := is_fin_dim_of_wdb K B n S (by omega) e
 
-  exact ⟨n, hn, ⟨e.trans $ AlgEquiv.mapMatrix $ AlgEquiv.symm $
+  exact ⟨n, hn, ⟨e.trans AlgEquiv.mapMatrix AlgEquiv.mapMatrix  AlgEquiv.symm $
     AlgEquiv.ofBijective (Algebra.ofId _ _) $
       bijective_algebraMap_of_finiteDimensional_divisionRing_over_algClosed _ _⟩⟩
 
